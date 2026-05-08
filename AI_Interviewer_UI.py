@@ -134,6 +134,16 @@ div[data-testid="stNotification"] svg {
     50% { transform: scale(1.02); filter: brightness(1.1); }
     100% { transform: scale(1); filter: brightness(1); }
 }
+
+/* 말하기 애니메이션 (더 역동적인 움직임) */
+@keyframes talking_motion {
+    0% { transform: scale(1); filter: brightness(1); }
+    25% { transform: scale(1.03); filter: brightness(1.15); }
+    50% { transform: scale(1.01); filter: brightness(1.05); }
+    75% { transform: scale(1.04); filter: brightness(1.2); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
 .interviewer-box {
     width: 100%;
     border-radius: 20px;
@@ -141,6 +151,12 @@ div[data-testid="stNotification"] svg {
     border: 2px solid var(--accent-color);
     box-shadow: 0 0 15px rgba(105, 117, 101, 0.3);
     animation: breathing 4s infinite ease-in-out;
+}
+
+.interviewer-box.talking {
+    border: 3px solid #FFD700; /* 말할 때 금색 테두리 효과 */
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+    animation: talking_motion 0.5s infinite ease-in-out;
 }
 
 /* 음성 파형 애니메이션 (보이스 비주얼라이저) */
@@ -176,6 +192,31 @@ div[data-testid="stNotification"] svg {
     background-color: var(--bg-color);
     padding: 10px 0;
     border-top: 1px solid rgba(255,255,255,0.1);
+}
+/* 사이드바 요소 수직 중앙 정렬 */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+    align-items: center !important;
+}
+/* 설정 카드 스타일 (Native Container 스타일링) */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.settings-anchor) {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(105, 117, 101, 0.3) !important;
+    border-radius: 15px !important;
+    padding-top: 25px !important; /* 상단 여백 보정 */
+    padding-bottom: 5px !important; /* 하단 라디오 버튼의 기본 마진을 고려하여 하단 패딩 축소 */
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    margin-bottom: 25px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 설정 카드 내부 요소 간격 미세 조정 (더 좁게) */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.settings-anchor) [data-testid="stVerticalBlock"] {
+    gap: 0rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.settings-anchor) .stMarkdown p {
+    margin-bottom: 0px !important;
+    padding-bottom: 0px !important;
 }
 </style>
 ''', unsafe_allow_html=True)
@@ -315,9 +356,9 @@ with st.sidebar:
                 if c2.button("영구삭제", key=f"hdel_{ts['id']}"): hard_delete_session(ts['id']); st.rerun()
 
         # 대화 리스트 뿌려주기
-        h1, h2 = st.columns([0.75, 0.25])
+        h1, h2 = st.columns([0.8, 0.2])
         h1.markdown("<p class='sidebar-subheader'>진행 중인 대화</p>", unsafe_allow_html=True)
-        if h2.button("선택" if not st.session_state["selection_mode"] else "취소", key="toggle_selection"):
+        if h2.button("선택" if not st.session_state["selection_mode"] else "취소", key="toggle_selection", use_container_width=True):
             st.session_state["selection_mode"] = not st.session_state["selection_mode"]
             st.session_state["selected_sessions"] = []
             st.rerun()
@@ -352,10 +393,10 @@ with st.sidebar:
                 if st.session_state.get(f"editing_{s['id']}", False):
                     st.text_input("수정", value=s["title"], key=f"title_input_{s['id']}", on_change=save_title, args=(s["id"],), label_visibility="collapsed")
                 else:
-                    c1, c2 = st.columns([0.85, 0.15])
+                    c1, c2 = st.columns([0.8, 0.2])
                     if c1.button(label, key=f"open_{s['id']}", use_container_width=True):
                         go_to_page("session_view", s["id"]); st.rerun()
-                    with c2.popover("\u200B"):
+                    with c2.popover("\u200B", use_container_width=True):
                         if st.button("✏️ 수정", key=f"ed_{s['id']}"): st.session_state[f"editing_{s['id']}"] = True; st.rerun()
                         if st.button("🗑️ 삭제", key=f"dl_{s['id']}"): delete_confirmation_dialog(s["id"])
 
@@ -439,100 +480,134 @@ else:
                 """)
             st.divider()
 
-            if not curr.get("resume_messages"):
-                curr["resume_messages"] = [{"role": "assistant", "content": "안녕하세요! 어떤 경험을 이력서에 녹여내고 싶으신가요? 고민되는 부분을 말씀해 주시면 함께 수정안을 만들어 볼게요."}]
-            
-            for m in curr.get("resume_messages", []):
-                with st.chat_message(m["role"]): st.markdown(m["content"])
-            
-            if p := st.chat_input("고민 상담 또는 '이력서 수정해줘'라고 입력하세요", accept_file=True, file_type=['pdf', 'txt', 'docx']):
-                if p.text and ("면접시작" in p.text.replace(" ", "") or "면접보자" in p.text.replace(" ", "")):
-                    curr["active_mode"] = "interview"; st.rerun()
+            # 채팅 영역 (스크롤 가능한 컨테이너)
+            with st.container(height=550):
+                # 1. 기존 대화 기록 출력
+                for m in curr.get("resume_messages", []):
+                    with st.chat_message(m["role"]): st.markdown(m["content"])
                 
-                if not process_command(p.text if p.text else ""):
-                    user_content = ""
-                    if p.files: user_content += f"📄 [파일 첨부: {p.files[0].name}]\n\n"
-                    if p.text: user_content += p.text
+                # 2. 신규 입력 처리
+                input_p = None
+                if st.session_state.get("resume_input_trigger"):
+                    input_p = st.session_state.pop("resume_input_trigger")
 
-                    curr.setdefault("resume_messages", []).append({"role": "user", "content": user_content})
-                    with st.chat_message("user"): st.markdown(user_content)
-                    with st.chat_message("assistant"):
-                        with st.spinner("AI 컨설턴트가 생각 중..."):
-                            time.sleep(1.0)
-                            if p.text and "수정" in p.text:
-                                res = "말씀하신 내용을 반영하여 이력서 문구를 수정해 보았습니다.\n\n[수정안]\n'단순 기술 도입에 그치지 않고, MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선하며 팀의 생산성을 높였습니다.'\n\n이 문구는 어떠신가요? 면접을 바로 보시려면 상단 'AI 모의 면접' 버튼을 클릭하거나 '면접 시작'이라고 말씀해 주세요!"
-                                curr["resume_data"] = "MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선"
-                            elif p.text and ("역할" in p.text or "경험" in p.text):
-                                res = "그 경험에서 본인이 맡았던 구체적인 역할은 무엇이었나요? 더 임팩트 있는 문구로 다듬어 드릴게요!"
-                            else:
-                                res = f"{p.text if p.text else '이력서'}에 대해 더 자세히 알고 싶습니다. 그 경험이 지원하시는 직무와 어떤 연관이 있다고 생각하시나요?"
-                            st.markdown(res); curr.setdefault("resume_messages", []).append({"role": "assistant", "content": res})
+                if input_p:
+                    if not process_command(input_p.text if input_p.text else ""):
+                        user_content = ""
+                        if input_p.files: user_content += f"📄 [파일 첨부: {input_p.files[0].name}]\n\n"
+                        if input_p.text: user_content += input_p.text
+
+                        curr.setdefault("resume_messages", []).append({"role": "user", "content": user_content})
+                        with st.chat_message("user"): st.markdown(user_content)
+                        
+                        with st.chat_message("assistant"):
+                            with st.spinner("AI 컨설턴트가 생각 중..."):
+                                time.sleep(1.0)
+                                if input_p.text and "수정" in input_p.text:
+                                    res = "말씀하신 내용을 반영하여 이력서 문구를 수정해 보았습니다.\n\n[수정안]\n'단순 기술 도입에 그치지 않고, MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선하며 팀의 생산성을 높였습니다.'\n\n이 문구는 어떠신가요? 면접을 바로 보시려면 상단 'AI 모의 면접' 버튼을 클릭하거나 '면접 시작'이라고 말씀해 주세요!"
+                                    curr["resume_data"] = "MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선"
+                                elif input_p.text and ("역할" in input_p.text or "경험" in p.text):
+                                    res = "그 경험에서 본인이 맡았던 구체적인 역할은 무엇이었나요? 더 임팩트 있는 문구로 다듬어 드릴게요!"
+                                else:
+                                    res = f"{input_p.text if input_p.text else '이력서'}에 대해 더 자세히 알고 싶습니다. 그 경험이 지원하시는 직무와 어떤 연관이 있다고 생각하시나요?"
+                                st.markdown(res)
+                                curr.setdefault("resume_messages", []).append({"role": "assistant", "content": res})
+                    st.rerun()
+
+            # 채팅 입력창
+            p_in = st.chat_input("고민 상담 또는 '이력서 수정해줘'라고 입력하세요", accept_file=True, file_type=['pdf', 'txt', 'docx'])
+            if p_in:
+                st.session_state["resume_input_trigger"] = p_in
                 st.rerun()
 
         elif curr.get("active_mode", "resume") == "interview":
-            # AI 모의 면접 모드 (분할 레이아웃: 좌측 면접관/버튼, 우측 채팅)
+            # AI 모의 면접 모드
             st.title("AI 모의 면접")
             
-            # 상단 설정 (스타일 등)
-            col_s1, col_s2 = st.columns(2)
-            with col_s1: ui = st.radio("인터페이스", ["텍스트", "음성"], horizontal=True)
-            with col_s2:
-                selected_style = st.radio("스타일", ["일반 면접", "압박 면접"], 
-                                 index=0 if curr.get("interview_style") == "일반 면접" else 1, horizontal=True)
-                if selected_style != curr.get("interview_style"):
-                    curr["interview_style"] = selected_style
-                    curr.setdefault("interview_messages", []).append({"role": "assistant", "content": f"📢 스타일: **{selected_style}**"})
-                    st.rerun()
-            
-            st.divider()
+            # 설정 카드 영역 (인터페이스, 스타일, 화상 토글 통합)
+            with st.container(border=True):
+                st.markdown('<div class="settings-anchor"></div>', unsafe_allow_html=True)
+                col_s1, col_s2, col_s3 = st.columns([0.35, 0.35, 0.3])
+                with col_s1: 
+                    st.markdown("**🎙️ 인터페이스**")
+                    ui = st.radio("UI", ["텍스트", "음성"], horizontal=True, label_visibility="collapsed")
+                with col_s2:
+                    st.markdown("**🎯 스타일**")
+                    selected_style = st.radio("Style", ["일반 면접", "압박 면접"], 
+                                     index=0 if curr.get("interview_style") == "일반 면접" else 1, horizontal=True, label_visibility="collapsed")
+                    if selected_style != curr.get("interview_style"):
+                        curr["interview_style"] = selected_style
+                        curr.setdefault("interview_messages", []).append({"role": "assistant", "content": f"📢 스타일: **{selected_style}**"})
+                        st.rerun()
+                with col_s3:
+                    st.markdown("**📹 화상 모드**")
+                    video_on = st.toggle("ON/OFF", value=curr.get("video_mode", True), label_visibility="collapsed")
+                    if video_on != curr.get("video_mode"):
+                        curr["video_mode"] = video_on
+                        st.rerun()
 
-            # 메인 분할 레이아웃
-            v_left, v_right = st.columns([0.4, 0.6])
-            
-            with v_left:
-                # 면접관 표시 (화상 모드일 때만)
-                if curr.get("video_mode", True): # 기본적으로 보이게 설정하거나 토글 유지
-                    st.markdown('<div class="interviewer-box">', unsafe_allow_html=True)
+            # 메인 레이아웃 결정
+            if curr.get("video_mode", True):
+                v_left, v_right = st.columns([0.4, 0.6])
+                with v_left:
+                    # 면접관 표시 (화상 모드일 때만)
+                    talking_class = "talking" if st.session_state.get("is_ai_talking") else ""
+                    st.markdown(f'<div class="interviewer-box {talking_class}">', unsafe_allow_html=True)
                     img_path = r"C:\Users\ekdus\.gemini\antigravity\brain\e3969c1b-c55b-4d64-96fa-1494af90e874\female_interviewer_v2_1778229880895.png"
                     st.image(img_path, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                     
                     if st.session_state.get("is_ai_talking"):
                         st.markdown('''<div class="waveform"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>''', unsafe_allow_html=True)
-                
-                st.write("")
-                # 화상 모드 토글
-                video_on = st.toggle("📹 화상 면접 모드", value=curr.get("video_mode", True))
-                if video_on != curr.get("video_mode"):
-                    curr["video_mode"] = video_on
-                    st.rerun()
-            
-            with v_right:
+                chat_target = v_right
+            else:
+                chat_target = st.container() # 가득 찬 화면
+
+            with chat_target:
                 # 첫 메시지 생성
                 if not curr.get("interview_messages"):
                     initial_msg = "안녕하세요! 면접을 시작하겠습니다. 자기소개 부탁드립니다."
                     curr["interview_messages"] = [{"role": "assistant", "content": initial_msg}]
 
                 # 채팅 내역 및 신규 입력 처리 (스크롤 가능한 고정 영역)
-                with st.container(height=550):
+                # 화상 모드일 때와 아닐 때의 높이 최적화
+                container_height = 550 if curr.get("video_mode") else 650
+                with st.container(height=container_height):
                     # 1. 기존 대화 기록 출력
                     for m in curr.get("interview_messages", []):
                         with st.chat_message(m["role"]): st.markdown(m["content"])
                     
                     # 2. 신규 입력 처리 및 실시간 답변 출력 (컨테이너 내부에서 렌더링)
                     input_text = None
+                    input_files = None
                     if st.session_state.get("voice_input_trigger"):
                         trig = st.session_state.pop("voice_input_trigger")
-                        input_text = trig if isinstance(trig, str) else getattr(trig, 'text', None)
+                        if hasattr(trig, 'text'):
+                            input_text = trig.text
+                            input_files = trig.files
+                        else:
+                            input_text = trig
 
-                    if input_text:
-                        curr.setdefault("interview_messages", []).append({"role": "user", "content": input_text})
-                        with st.chat_message("user"): st.markdown(input_text)
+                    if input_text or input_files:
+                        user_content = ""
+                        if input_files:
+                            fname = input_files[0].name
+                            user_content += f"📄 [파일 첨부: {fname}]\n\n"
+                            curr["resume_data"] = f"{fname} 기반의 핵심 경력" # 분석 시뮬레이션
+                        if input_text:
+                            user_content += input_text
+
+                        curr.setdefault("interview_messages", []).append({"role": "user", "content": user_content})
+                        with st.chat_message("user"): st.markdown(user_content)
                         
                         with st.chat_message("assistant"):
-                            with st.spinner("AI 답변 중..."):
-                                time.sleep(1.2)
-                                res_text = "네, 답변 감사드립니다. 다음 질문입니다." # [MOCK]
+                            with st.spinner("이력서 분석 및 답변 생성 중..."):
+                                time.sleep(1.5)
+                                if input_files:
+                                    res_text = f"첨부해주신 이력서({input_files[0].name})를 확인했습니다. 기재하신 프로젝트 경험 중 가장 어려웠던 기술적 난관은 무엇이었나요?"
+                                else:
+                                    res_text = "네, 답변 감사드립니다. 다음 질문입니다." # [MOCK]
+                                
                                 st.session_state["is_ai_talking"] = True
                                 st.write_stream(stream_data(res_text))
                                 st.session_state["is_ai_talking"] = False
@@ -549,10 +624,9 @@ else:
 
                 # 채팅 입력창 (텍스트 모드일 때만 표시)
                 if ui == "텍스트":
-                    p_in = st.chat_input("면접 답변을 입력하세요", accept_file=True, file_type=['pdf', 'txt', 'docx'])
+                    p_in = st.chat_input("면접 답변을 입력하거나 이력서를 첨부하세요", accept_file=True, file_type=['pdf', 'txt', 'docx'])
                     if p_in:
                         st.session_state["voice_input_trigger"] = p_in
                         st.rerun()
                 else:
-                    # 음성 모드일 때는 입력창 대신 여백을 주어 버튼이 눈에 띄게 함
                     st.write("<br>", unsafe_allow_html=True)
