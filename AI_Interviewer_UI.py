@@ -547,15 +547,25 @@ else:
                     talking_class = "talking" if st.session_state.get("is_ai_talking") else ""
                     st.markdown(f'<div class="interviewer-box {talking_class}">', unsafe_allow_html=True)
                     
-                    # [하드코딩] 이미지 경로 - 배포 시에는 상대 경로(예: assets/image.png)로 변경 필요
-                    img_path = r"C:\Users\ekdus\.gemini\antigravity\brain\e3969c1b-c55b-4d64-96fa-1494af90e874\female_interviewer_v2_1778229880895.png"
+                    # [배포 팁] 이미지를 스크립트와 같은 폴더에 넣고 아래처럼 상대 경로를 쓰면 어디서든 작동합니다.
+                    # 예: img_path = "interviewer.png"
+                    
+                    # 현재 로컬 경로와 상대 경로를 모두 체크하도록 개선
+                    rel_path = "interviewer.png"
+                    abs_path = r"C:\Users\ekdus\.gemini\antigravity\brain\e3969c1b-c55b-4d64-96fa-1494af90e874\female_interviewer_v2_1778229880895.png"
                     
                     import os
-                    if os.path.exists(img_path):
-                        st.image(img_path, use_container_width=True)
+                    if os.path.exists(rel_path):
+                        img_to_show = rel_path
+                    elif os.path.exists(abs_path):
+                        img_to_show = abs_path
                     else:
-                        st.error("면접관 이미지를 찾을 수 없습니다. 경로를 확인해주세요.")
-                        # 임시 플레이스홀더 (필요시)
+                        img_to_show = None
+
+                    if img_to_show:
+                        st.image(img_to_show, use_container_width=True)
+                    else:
+                        st.error("면접관 이미지를 찾을 수 없습니다. 'interviewer.png' 파일을 스크립트와 같은 폴더에 넣어주세요.")
                         st.image("https://via.placeholder.com/400x500?text=AI+Interviewer", use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                     
@@ -603,7 +613,9 @@ else:
                         with st.chat_message("user"): st.markdown(user_content)
                         
                         with st.chat_message("assistant"):
-                            with st.spinner("이력서 분석 및 답변 생성 중..."):
+                            # 파일 첨부 여부에 따라 메시지 분기
+                            spinner_msg = "이력서 분석 및 답변 생성 중..." if input_files else "답변 생성 중..."
+                            with st.spinner(spinner_msg):
                                 time.sleep(1.5) # [하드코딩] 지연 시간
                                 if input_files:
                                     res_text = f"첨부해주신 이력서({input_files[0].name})를 확인했습니다. 기재하신 프로젝트 경험 중 가장 어려웠던 기술적 난관은 무엇이었나요?" # [하드코딩] 질문 샘플
