@@ -2,12 +2,11 @@ import streamlit as st
 import uuid
 import time
 from datetime import datetime, timedelta
-# import openai  # OpenAI API 사용 시 주석 해제
 
-# 기본 페이지 세팅
+# 페이지 기본 설정
 st.set_page_config(page_title="AI 면접관 & 이력서 첨삭", layout="wide", page_icon="")
 
-# UI 스타일링 및 테마 설정
+# UI 스타일 및 커스텀 테마
 st.markdown('''
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200..900&display=swap');
@@ -183,16 +182,6 @@ div[data-testid="stNotification"] svg {
 .bar:nth-child(3) { animation-delay: 0.2s; }
 .bar:nth-child(4) { animation-delay: 0.3s; }
 .bar:nth-child(5) { animation-delay: 0.4s; }
-/* 하단 고정 마이크 버튼 스타일 (Sticky 방식) */
-.sticky-mic-container {
-    position: -webkit-sticky;
-    position: sticky;
-    bottom: 0px;
-    z-index: 100;
-    background-color: var(--bg-color);
-    padding: 10px 0;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
 /* 사이드바 요소 수직 중앙 정렬 */
 [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
     align-items: center !important;
@@ -221,8 +210,8 @@ div[data-testid="stNotification"] svg {
 </style>
 ''', unsafe_allow_html=True)
 
-# 세션 상태 관리 (State Init)
-if "users" not in st.session_state: st.session_state["users"] = {"test": "1234"}
+# 세션 상태 초기화
+if "users" not in st.session_state: st.session_state["users"] = {"test": "1234"} # [하드코딩] 테스트 계정
 if "current_user" not in st.session_state: st.session_state["current_user"] = None
 if "is_logged_in" not in st.session_state: st.session_state["is_logged_in"] = False
 if "page" not in st.session_state: st.session_state["page"] = "home"
@@ -234,7 +223,7 @@ if "selection_mode" not in st.session_state: st.session_state["selection_mode"] 
 if "selected_sessions" not in st.session_state: st.session_state["selected_sessions"] = []
 if "is_ai_talking" not in st.session_state: st.session_state["is_ai_talking"] = False
 
-# 세션 관리 관련 유틸 함수들
+# 대화 세션 관리 함수
 def create_session(title="새로운 대화", initial_type="resume"):
     session_id = str(uuid.uuid4())
     st.session_state["sessions"][session_id] = {
@@ -282,20 +271,20 @@ def go_to_page(page_name, session_id=None):
     if session_id: st.session_state["current_session_id"] = session_id
     elif page_name == "home": st.session_state["current_session_id"] = None
 
-# 타이핑 효과 함수 (시뮬레이션용)
+# 텍스트 타이핑 효과
 def stream_data(text):
     for word in text.split(" "):
         yield word + " "
-        time.sleep(0.08)
+        time.sleep(0.08) # [하드코딩] 타이핑 속도 조절
 
 # TTS 음성 출력 함수
 def speak_text(text, enabled=False):
     if not enabled: return
     st.toast(f"🔊 음성 재생 중: {text[:20]}...")
 
-# STT (Whisper) 음성 인식 함수
+# 음성 인식(STT) 처리
 def stt_whisper(audio_file):
-    return "가짜 음성 인식 결과입니다. (Whisper API 연동 시 실제 답변으로 대체됩니다.)"
+    return "가짜 음성 인식 결과입니다. (Whisper API 연동 시 실제 답변으로 대체됩니다.)" # [하드코딩] Mock 데이터
     
 def save_title(session_id):
     new_title = st.session_state[f"title_input_{session_id}"]
@@ -332,7 +321,7 @@ def empty_trash_confirmation_dialog():
         st.rerun()
     if c2.button("취소"): st.rerun()
 
-# 사이드바 레이아웃
+# 사이드바 구성
 with st.sidebar:
     st.title("AI 면접관")
     if not st.session_state["is_logged_in"]:
@@ -355,7 +344,7 @@ with st.sidebar:
                 if c1.button("복구", key=f"res_{ts['id']}"): restore_session(ts['id']); st.rerun()
                 if c2.button("영구삭제", key=f"hdel_{ts['id']}"): hard_delete_session(ts['id']); st.rerun()
 
-        # 대화 리스트 뿌려주기
+        # 세션 리스트 렌더링
         h1, h2 = st.columns([0.8, 0.2])
         h1.markdown("<p class='sidebar-subheader'>진행 중인 대화</p>", unsafe_allow_html=True)
         if h2.button("선택" if not st.session_state["selection_mode"] else "취소", key="toggle_selection", use_container_width=True):
@@ -409,7 +398,7 @@ with st.sidebar:
         st.subheader("⚙️ API 설정")
         st.text_input("OpenAI API Key", type="password", key="api_key_input", help="TTS/STT 기능을 사용하려면 키가 필요합니다.")
 
-# 메인 뷰 로직
+# 메인 화면 로직
 if not st.session_state["is_logged_in"]:
     st.title("AI 면접관 & 이력서 첨삭")
     st.markdown("서비스를 이용하시려면 로그인해주세요.")
@@ -480,13 +469,17 @@ else:
                 """)
             st.divider()
 
-            # 채팅 영역 (스크롤 가능한 컨테이너)
+            # 메시지 컨테이너 (스크롤 가능)
             with st.container(height=550):
-                # 1. 기존 대화 기록 출력
+                # 0. 환영 메시지
+                if not curr.get("resume_messages"):
+                    curr["resume_messages"] = [{"role": "assistant", "content": "안녕하세요! 어떤 경험을 이력서에 녹여내고 싶으신가요? 고민되는 부분을 말씀해 주시면 함께 수정안을 만들어 볼게요."}]
+
+                # 1. 이전 대화 기록
                 for m in curr.get("resume_messages", []):
                     with st.chat_message(m["role"]): st.markdown(m["content"])
                 
-                # 2. 신규 입력 처리
+                # 2. 사용자 입력 처리
                 input_p = None
                 if st.session_state.get("resume_input_trigger"):
                     input_p = st.session_state.pop("resume_input_trigger")
@@ -502,29 +495,29 @@ else:
                         
                         with st.chat_message("assistant"):
                             with st.spinner("AI 컨설턴트가 생각 중..."):
-                                time.sleep(1.0)
+                                time.sleep(1.0) # [하드코딩] 지연 시간
                                 if input_p.text and "수정" in input_p.text:
-                                    res = "말씀하신 내용을 반영하여 이력서 문구를 수정해 보았습니다.\n\n[수정안]\n'단순 기술 도입에 그치지 않고, MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선하며 팀의 생산성을 높였습니다.'\n\n이 문구는 어떠신가요? 면접을 바로 보시려면 상단 'AI 모의 면접' 버튼을 클릭하거나 '면접 시작'이라고 말씀해 주세요!"
-                                    curr["resume_data"] = "MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선"
-                                elif input_p.text and ("역할" in input_p.text or "경험" in p.text):
-                                    res = "그 경험에서 본인이 맡았던 구체적인 역할은 무엇이었나요? 더 임팩트 있는 문구로 다듬어 드릴게요!"
+                                    res = "말씀하신 내용을 반영하여 이력서 문구를 수정해 보았습니다.\n\n[수정안]\n'단순 기술 도입에 그치지 않고, MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선하며 팀의 생산성을 높였습니다.'\n\n이 문구는 어떠신가요? 면접을 바로 보시려면 상단 'AI 모의 면접' 버튼 클릭 혹은 '면접 시작'이라고 말씀해 주세요!" # [하드코딩] 응답 샘플
+                                    curr["resume_data"] = "MSA 환경에서 캐싱 전략을 최적화하여 응답 속도를 40% 개선" # [하드코딩] 분석 데이터 샘플
+                                elif input_p.text and ("역할" in input_p.text or "경험" in input_p.text):
+                                    res = "그 경험에서 본인이 맡았던 구체적인 역할은 무엇이었나요? 더 임팩트 있는 문구로 다듬어 드릴게요!" # [하드코딩] 응답 샘플
                                 else:
-                                    res = f"{input_p.text if input_p.text else '이력서'}에 대해 더 자세히 알고 싶습니다. 그 경험이 지원하시는 직무와 어떤 연관이 있다고 생각하시나요?"
+                                    res = f"{input_p.text if input_p.text else '이력서'}에 대해 더 자세히 알고 싶습니다. 그 경험이 지원하시는 직무와 어떤 연관이 있다고 생각하시나요?" # [하드코딩] 응답 샘플
                                 st.markdown(res)
                                 curr.setdefault("resume_messages", []).append({"role": "assistant", "content": res})
                     st.rerun()
 
             # 채팅 입력창
-            p_in = st.chat_input("고민 상담 또는 '이력서 수정해줘'라고 입력하세요", accept_file=True, file_type=['pdf', 'txt', 'docx'])
+            p_in = st.chat_input("이력서 작성에 대한 고민 또는 '이력서 수정해줘'라고 입력하세요", accept_file=True, file_type=['pdf', 'txt', 'docx'])
             if p_in:
                 st.session_state["resume_input_trigger"] = p_in
                 st.rerun()
 
         elif curr.get("active_mode", "resume") == "interview":
-            # AI 모의 면접 모드
+            # AI 모의 면접
             st.title("AI 모의 면접")
             
-            # 설정 카드 영역 (인터페이스, 스타일, 화상 토글 통합)
+            # 설정 옵션 카드 (인터페이스, 스타일, 화상 토글)
             with st.container(border=True):
                 st.markdown('<div class="settings-anchor"></div>', unsafe_allow_html=True)
                 col_s1, col_s2, col_s3 = st.columns([0.35, 0.35, 0.3])
@@ -546,14 +539,14 @@ else:
                         curr["video_mode"] = video_on
                         st.rerun()
 
-            # 메인 레이아웃 결정
+            # 화면 레이아웃 구성
             if curr.get("video_mode", True):
                 v_left, v_right = st.columns([0.4, 0.6])
                 with v_left:
                     # 면접관 표시 (화상 모드일 때만)
                     talking_class = "talking" if st.session_state.get("is_ai_talking") else ""
                     st.markdown(f'<div class="interviewer-box {talking_class}">', unsafe_allow_html=True)
-                    img_path = r"C:\Users\ekdus\.gemini\antigravity\brain\e3969c1b-c55b-4d64-96fa-1494af90e874\female_interviewer_v2_1778229880895.png"
+                    img_path = r"C:\Users\ekdus\.gemini\antigravity\brain\e3969c1b-c55b-4d64-96fa-1494af90e874\female_interviewer_v2_1778229880895.png" # [하드코딩] 이미지 절대 경로
                     st.image(img_path, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                     
@@ -564,13 +557,13 @@ else:
                 chat_target = st.container() # 가득 찬 화면
 
             with chat_target:
-                # 첫 메시지 생성
+                # 0. 초기 안내 메시지
                 if not curr.get("interview_messages"):
                     initial_msg = "안녕하세요! 면접을 시작하겠습니다. 자기소개 부탁드립니다."
                     curr["interview_messages"] = [{"role": "assistant", "content": initial_msg}]
 
-                # 채팅 내역 및 신규 입력 처리 (스크롤 가능한 고정 영역)
-                # 화상 모드일 때와 아닐 때의 높이 최적화
+                # 대화 내용 렌더링 및 입력 처리
+                # 화상 모드 여부에 따라 컨테이너 높이 조절
                 container_height = 550 if curr.get("video_mode") else 650
                 with st.container(height=container_height):
                     # 1. 기존 대화 기록 출력
@@ -602,11 +595,11 @@ else:
                         
                         with st.chat_message("assistant"):
                             with st.spinner("이력서 분석 및 답변 생성 중..."):
-                                time.sleep(1.5)
+                                time.sleep(1.5) # [하드코딩] 지연 시간
                                 if input_files:
-                                    res_text = f"첨부해주신 이력서({input_files[0].name})를 확인했습니다. 기재하신 프로젝트 경험 중 가장 어려웠던 기술적 난관은 무엇이었나요?"
+                                    res_text = f"첨부해주신 이력서({input_files[0].name})를 확인했습니다. 기재하신 프로젝트 경험 중 가장 어려웠던 기술적 난관은 무엇이었나요?" # [하드코딩] 질문 샘플
                                 else:
-                                    res_text = "네, 답변 감사드립니다. 다음 질문입니다." # [MOCK]
+                                    res_text = "네, 답변 감사드립니다. 다음 질문입니다." # [하드코딩] 질문 샘플
                                 
                                 st.session_state["is_ai_talking"] = True
                                 st.write_stream(stream_data(res_text))
