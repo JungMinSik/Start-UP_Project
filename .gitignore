@@ -1,3 +1,6 @@
 # Farukh ignored files
 /farukhFolder/
 /project_brain/
+__pycache__/
+*.pyc
+venv/
