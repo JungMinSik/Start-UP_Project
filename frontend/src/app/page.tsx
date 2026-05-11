@@ -7,12 +7,25 @@ import InterviewerSection from '@/components/InterviewerSection';
 import ResumeComparison from '@/components/ResumeComparison';
 import InterviewReport, { ReportData } from '@/components/InterviewReport';
 import {
-    Briefcase, FileText, Monitor, Mic, Layout as LayoutIcon,
-    ChevronRight, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronUp, RotateCcw,
+    AlertTriangle,
+    Briefcase,
+    CheckCircle2,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    FileText,
+    Info,
+    Layout as LayoutIcon,
+    Mic,
+    Monitor,
+    RotateCcw,
+    Settings,
     Trophy
 } from 'lucide-react';
 
 // 메시지 및 세션 인터페이스 정의
+// 세션 통합 관리 구조: 첨삭 완료된 이력서(resumeAfter) 기반으로 모의 면접 진행됨
+// 첨삭 데이터와 면접 로그를 하나의 Session 객체 안에서 통합 저장함
 interface Message {
     role: 'user' | 'assistant';
     content: string;
@@ -35,6 +48,7 @@ interface Session {
     resumeBefore?: string;
     resumeAfter?: string;
     resumeHighlights?: { original: string; improved: string; reason: string }[];
+    isCompleted?: boolean;
 }
 
 export default function Home() {
@@ -120,7 +134,8 @@ export default function Home() {
             interviewInterface: '텍스트',
             resumeInterface: '텍스트',
             createdAt: new Date().toISOString(),
-            interviewerId: 'normal_f'
+            interviewerId: 'normal_f',
+            isCompleted: false
         };
         setSessions([newSession, ...sessions]);
         setCurrentSessionId(newSession.id);
@@ -152,6 +167,9 @@ export default function Home() {
     };
 
     // 메시지 전송 및 AI 응답 처리 [하드코딩]
+    // API 연동 시 주의: 면접 모드에서 메시지 전송 시 단순 채팅 로그뿐만 아니라
+    // 완성된 이력서 데이터(currentSession.resumeAfter)도 페이로드에 같이 넘겨야 함
+    // (AI가 이력서를 프롬프트로 삼아 꼬리 질문 생성하기 위함)
     const handleSendMessage = (text: string, file?: File | null, audioBlob?: Blob | null) => {
         if (!currentSessionId || !currentSession) return;
 
@@ -393,7 +411,6 @@ export default function Home() {
                                 <button
                                     onClick={() => setSessions(prev => prev.map(s => {
                                         if (s.id === currentSessionId && s.mode !== 'resume') {
-                                            // 이미 대화가 진행 중이었는지 확인 (초기 메시지 1개보다 많은지)
                                             const hasInteraction = s.resumeMessages.length > 1;
                                             const hasFile = s.resumeBefore || s.resumeMessages.some(m => m.content.includes("📄 [파일 첨부:"));
 
@@ -436,135 +453,123 @@ export default function Home() {
                                 >AI 모의 면접</button>
                             </div>
                             {/* 상세 설정 영역 (인터페이스, 스타일, 성별 등) */}
-                            <div className="h-[108px] px-8 bg-[#3C3D37]/50 rounded-[32px] border border-white/5 flex items-center justify-between shadow-2xl backdrop-blur-md shrink-0 animate-in fade-in slide-in-from-top-2 duration-300 gap-8 overflow-x-auto scrollbar-none">
-                                <div className="flex items-center gap-12 pl-4">
-                                    {currentSession?.mode === 'interview' ? (
-                                        <>
-                                            <div className="flex items-center gap-4 shrink-0">
-                                                <span className="text-xs font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><Monitor size={16} /> 인터페이스</span>
-                                                <div className="flex bg-black/20 p-1.5 rounded-xl shrink-0">
-                                                    {['텍스트', '음성'].map(opt => (
-                                                        <button
-                                                            key={opt}
-                                                            onClick={() => setSessions(prev => prev.map(s => {
-                                                                if (s.id === currentSessionId && s.interviewInterface !== opt) {
-                                                                    const msg = opt === '음성'
-                                                                        ? "음성 인터페이스로 전환되었습니다. 하단의 답변 녹음 버튼을 눌러 대화를 시작하세요!"
-                                                                        : "텍스트 인터페이스로 전환되었습니다. 키보드로 답변을 입력해 주세요.";
-                                                                    return { ...s, interviewInterface: opt, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: msg }] };
-                                                                }
-                                                                return s;
-                                                            }))}
-                                                            className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${currentSession?.interviewInterface === opt ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
-                                                        >{opt}</button>
-                                                    ))}
+                            <div className="bg-[#3C3D37]/50 rounded-[32px] border border-white/5 shadow-2xl backdrop-blur-md shrink-0 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
+                                <div className="px-8 h-[90px] flex items-center justify-between gap-8">
+                                    <div className="flex items-center gap-10">
+                                        {currentSession?.mode === 'interview' ? (
+                                            <>
+                                                {/* 기본 설정: 인터페이스, 스타일 */}
+                                                <div className="flex items-center gap-4 shrink-0">
+                                                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><Monitor size={14} /> 인터페이스</span>
+                                                    <div className="flex bg-black/20 p-1 rounded-xl">
+                                                        {['텍스트', '음성'].map(opt => (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => setSessions(prev => prev.map(s => {
+                                                                    if (s.id === currentSessionId && s.interviewInterface !== opt) {
+                                                                        const msg = opt === '음성' ? "음성 인터페이스로 전환되었습니다." : "텍스트 인터페이스로 전환되었습니다.";
+                                                                        return { ...s, interviewInterface: opt, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: msg }] };
+                                                                    }
+                                                                    return s;
+                                                                }))}
+                                                                className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.interviewInterface === opt ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
+                                                            >{opt}</button>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex items-center gap-4 shrink-0">
-                                                <span className="text-xs font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><LayoutIcon size={16} /> 스타일</span>
-                                                <div className="flex bg-black/20 p-1.5 rounded-xl shrink-0">
-                                                    {['일반 면접', '압박 면접'].map(opt => (
-                                                        <button
-                                                            key={opt}
-                                                            onClick={() => setSessions(prev => prev.map(s => {
-                                                                if (s.id === currentSessionId && s.style !== opt) {
-                                                                    const msg = opt === '압박 면접'
-                                                                        ? "압박 면접 모드로 전환되었습니다. 이제부터 날카로운 질문이 시작됩니다!"
-                                                                        : "일반 면접 모드로 전환되었습니다. 편안한 분위기에서 대화를 이어갑니다.";
-
-                                                                    const isMale = s.interviewerId?.endsWith('_m') || false;
-                                                                    const newAvatar = opt === '압박 면접'
-                                                                        ? (isMale ? 'pressure_m' : 'pressure_f')
-                                                                        : (isMale ? 'normal_m' : 'normal_f');
-
-                                                                    return {
-                                                                        ...s,
-                                                                        style: opt,
-                                                                        interviewerId: newAvatar,
-                                                                        interviewMessages: [...s.interviewMessages, { role: 'assistant', content: msg }]
-                                                                    };
-                                                                }
-                                                                return s;
-                                                            }))}
-                                                            className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${currentSession?.style === opt ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
-                                                        >{opt}</button>
-                                                    ))}
+                                                <div className="flex items-center gap-4 shrink-0">
+                                                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><LayoutIcon size={14} /> 스타일</span>
+                                                    <div className="flex bg-black/20 p-1 rounded-xl">
+                                                        {['일반', '압박'].map(opt => (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => setSessions(prev => prev.map(s => {
+                                                                    const fullOpt = opt === '일반' ? '일반 면접' : '압박 면접';
+                                                                    if (s.id === currentSessionId && s.style !== fullOpt) {
+                                                                        const isMale = s.interviewerId?.endsWith('_m') || false;
+                                                                        const newAvatar = opt === '압박' ? (isMale ? 'pressure_m' : 'pressure_f') : (isMale ? 'normal_m' : 'normal_f');
+                                                                        return { ...s, style: fullOpt, interviewerId: newAvatar, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: `${fullOpt} 모드로 전환되었습니다.` }] };
+                                                                    }
+                                                                    return s;
+                                                                }))}
+                                                                className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.style.startsWith(opt) ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
+                                                            >{opt}</button>
+                                                        ))}
+                                                    </div>
                                                 </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-4 shrink-0">
+                                                <span className="text-xs font-bold text-white/60 uppercase tracking-[0.2em] flex items-center gap-2"><Monitor size={16} className="text-[#697565]" /> 이력서 첨삭: 텍스트 대화 전용</span>
                                             </div>
+                                        )}
+                                    </div>
 
-                                            {/* 면접관 성별 선택 */}
-                                            <div className="flex items-center gap-4 shrink-0 ml-4 border-l border-white/5 pl-8">
-                                                <span className="text-xs font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap">면접관 성별</span>
-                                                <div className="flex bg-black/20 p-1.5 rounded-xl shrink-0">
-                                                    {[
-                                                        { label: '여성', id: 'f' },
-                                                        { label: '남성', id: 'm' }
-                                                    ].map(opt => (
+                                    <div className="flex items-center gap-6">
+                                        {currentSession?.mode === 'interview' && (
+                                            <div className="flex items-center gap-4 shrink-0">
+                                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">화상 모드</span>
+                                                <button onClick={() => setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, videoMode: !s.videoMode } : s))} className={`px-8 py-2 rounded-xl text-[11px] font-bold transition-all ${currentSession?.videoMode ? 'bg-red-500/80 text-white' : 'bg-[#697565] text-white'}`}>{currentSession?.videoMode ? 'OFF' : 'ON'}</button>
+                                            </div>
+                                        )}
+                                        {currentSession?.mode === 'resume' && (
+                                            <button onClick={() => { if (window.confirm("초기화하시겠습니까?")) setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, resumeMessages: [s.resumeMessages[0]] } : s)); }} className="flex items-center gap-2 px-5 py-2 rounded-xl text-[11px] font-bold bg-white/5 text-white/90 hover:bg-white/10 border border-white/5"><RotateCcw size={14} className="text-[#697565]" /> 초기화</button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {currentSession?.mode === 'interview' && (
+                                    <details className="border-t border-white/5 group">
+                                        <summary className="h-10 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group-open:bg-black/20">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] group-hover:text-white/40 transition-colors">
+                                                <Settings size={12} /> 추가 설정 및 종료
+                                                <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                                            </div>
+                                        </summary>
+                                        <div className="p-6 bg-black/20 flex items-center justify-center gap-12 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">면접관 성별</span>
+                                                <div className="flex bg-black/20 p-1 rounded-xl">
+                                                    {[{ label: '여성', id: 'f' }, { label: '남성', id: 'm' }].map(opt => (
                                                         <button
                                                             key={opt.id}
                                                             onClick={() => setSessions(prev => prev.map(s => {
                                                                 if (s.id === currentSessionId) {
                                                                     const isPressure = s.style === '압박 면접';
-                                                                    const newAvatar = isPressure
-                                                                        ? (opt.id === 'm' ? 'pressure_m' : 'pressure_f')
-                                                                        : (opt.id === 'm' ? 'normal_m' : 'normal_f');
+                                                                    const newAvatar = isPressure ? (opt.id === 'm' ? 'pressure_m' : 'pressure_f') : (opt.id === 'm' ? 'normal_m' : 'normal_f');
                                                                     return { ...s, interviewerId: newAvatar };
                                                                 }
                                                                 return s;
                                                             }))}
-                                                            className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${currentSession?.interviewerId?.endsWith(opt.id) ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
+                                                            className={`px-6 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.interviewerId?.endsWith(opt.id) ? 'bg-[#697565] text-white' : 'text-white/40 hover:text-white'}`}
                                                         >{opt.label}</button>
                                                     ))}
                                                 </div>
                                             </div>
-
-                                            {/* 면접 종료 및 결과 보기 */}
+                                            <div className="w-px h-8 bg-white/5"></div>
                                             <button
-                                                onClick={() => setShowReport(true)}
-                                                className="ml-8 px-6 py-2.5 bg-gradient-to-r from-[#697565] to-[#3C3D37] text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all active:scale-95 flex items-center gap-2"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (window.confirm("면접을 종료하고 피드백을 받으시겠습니까?")) {
+                                                        setSessions(prev => prev.map(s => {
+                                                            if (s.id === currentSessionId) {
+                                                                return { ...s, isCompleted: true, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: "⚠️ 면접이 정상적으로 종료되었습니다. 리포트를 확인해 주세요." }] };
+                                                            }
+                                                            return s;
+                                                        }));
+                                                        setShowReport(true);
+                                                    }
+                                                }}
+                                                className="px-8 py-3 bg-gradient-to-r from-[#697565] to-[#3C3D37] text-white text-[12px] font-bold rounded-xl shadow-xl hover:scale-105 transition-all flex items-center gap-3"
                                             >
-                                                <Trophy size={14} className="text-yellow-400" />
-                                                면접 종료 및 결과 보기
+                                                <Trophy size={16} className="text-yellow-400" /> 면접 분석 및 종료
                                             </button>
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center gap-4 shrink-0">
-                                            <span className="text-xs font-bold text-white/60 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><Monitor size={16} className="text-[#697565]" /> 이력서 첨삭: 텍스트 대화 전용</span>
                                         </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-6 pr-4 shrink-0">
-                                    {currentSession?.mode === 'interview' && (
-                                        <div className="flex items-center gap-6 pr-6 border-r border-white/5 shrink-0">
-                                            <span className="text-xs font-bold text-white/60 uppercase tracking-[0.2em] whitespace-nowrap">화상 모드</span>
-                                            <button onClick={() => setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, videoMode: !s.videoMode } : s))} className={`px-10 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-xl whitespace-nowrap ${currentSession?.videoMode ? 'bg-red-500/80 text-white shadow-red-500/10' : 'bg-[#697565] text-white shadow-[#697565]/10'} hover:opacity-90`}>{currentSession?.videoMode ? 'OFF' : 'ON'}</button>
-                                        </div>
-                                    )}
-
-                                    {currentSession?.mode === 'resume' && (
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm("현재 대화 기록을 초기화하시겠습니까? 처음부터 다시 시작됩니다.")) {
-                                                    setSessions(prev => prev.map(s => {
-                                                        if (s.id === currentSessionId) {
-                                                            return {
-                                                                ...s,
-                                                                resumeMessages: [{ role: 'assistant', content: "안녕하세요. 이력서 첨삭을 도와드리겠습니다. 먼저 지원하시는 '희망 직무'와 이력서에서 강조하고 싶은 '핵심 키워드'를 말씀해 주세요." }]
-                                                            };
-                                                        }
-                                                        return s;
-                                                    }));
-                                                }
-                                            }}
-                                            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-white/5 text-white/90 hover:bg-white/10 hover:text-white transition-all border border-white/5 whitespace-nowrap shadow-sm"
-                                        >
-                                            <RotateCcw size={14} className="text-[#697565]" /> 대화 초기화
-                                        </button>
-                                    )}
-                                </div>
+                                    </details>
+                                )}
                             </div>
+
 
                             <div className="flex gap-10 h-[850px]">
                                 {currentSession?.mode === 'interview' && currentSession?.videoMode && (
@@ -638,29 +643,21 @@ export default function Home() {
                                                     setShowComparison(false); // 초기화 시 비교 화면도 닫기
                                                 }
                                             }}
-                                            onEndInterview={currentSession?.mode === 'interview' ? () => {
+                                            isCompleted={currentSession?.isCompleted}
+                                            onEndInterview={currentSession?.mode === 'interview' && !currentSession?.isCompleted ? () => {
                                                 const messageCount = currentSession?.interviewMessages?.length || 0;
                                                 if (messageCount <= 1) {
                                                     alert("면접 내용이 없습니다. 먼저 면접을 진행해 주세요.");
                                                     return;
                                                 }
 
-                                                if (window.confirm("면접을 종료하고 AI 피드백을 확인하시겠습니까?")) {
-                                                    setLoadingMessage("면접 결과를 분석 중입니다...");
-                                                    setIsLoading(true);
-
-                                                    // 면접 결과 분석 시뮬레이션 [하드코딩]
-                                                    setTimeout(() => {
-                                                        setIsLoading(false);
-                                                        const feedback = "전체적으로 답변의 논리 구조가 훌륭합니다. 특히 기술적인 문제를 해결했던 경험을 구체적인 수치와 함께 설명하신 점이 인상적이었습니다. 다만, 압박 질문이 들어왔을 때 조금 더 침착하게 본인의 페이스를 유지한다면 완벽할 것 같습니다. 고생하셨습니다!";
-
-                                                        setSessions(prev => prev.map(s => {
-                                                            if (s.id === currentSessionId) {
-                                                                return { ...s, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: `[면접 종료 피드백]\n\n${feedback}` }] };
-                                                            }
-                                                            return s;
-                                                        }));
-                                                    }, 2000);
+                                                if (window.confirm("면접을 즉시 종료하시겠습니까? (피드백 없이 종료됩니다)")) {
+                                                    setSessions(prev => prev.map(s => {
+                                                        if (s.id === currentSessionId) {
+                                                            return { ...s, isCompleted: true, interviewMessages: [...s.interviewMessages, { role: 'assistant', content: "⚠️ 면접이 강제 종료되었습니다." }] };
+                                                        }
+                                                        return s;
+                                                    }));
                                                 }
                                             } : undefined}
                                         />
