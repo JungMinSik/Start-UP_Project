@@ -304,7 +304,6 @@ export default function Home() {
         <div className="w-full max-w-md p-8 bg-[#3C3D37] rounded-[32px] border border-white/10 shadow-2xl space-y-8">
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">AI 면접관 & 이력서 첨삭</h2>
-            <p className="text-white/40 text-sm">서비스 이용을 위해 인증이 필요합니다.</p>
           </div>
           <div className="bg-black/30 p-1.5 rounded-2xl flex">
             <button onClick={() => setAuthMode('login')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${authMode === 'login' ? 'bg-[#697565] text-white shadow-lg' : 'text-white/30'}`}>로그인</button>
