@@ -236,24 +236,6 @@ export default function Sidebar({
              {isCollapsed ? <LogOut size={16} /> : '로그아웃'}
            </button>
         </div>
-        
-        {!isCollapsed && (
-          <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5 animate-in fade-in">
-            <div className="text-[10px] text-white/30 font-bold uppercase tracking-widest flex items-center gap-2">
-              <Settings size={12} /> API 설정
-            </div>
-            <div className="relative">
-              <input 
-                type="password" 
-                placeholder="OpenAI API Key"
-                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#697565] transition-all"
-              />
-              <div className="absolute right-3 top-2.5 text-white/10 pointer-events-none">
-                 <AlertCircle size={14} />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
