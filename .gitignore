@@ -1,9 +1,27 @@
 # Farukh ignored files
 /farukhFolder/
 /project_brain/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 venv/
+.venv/
 .env
 .env.local
 *.db
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Next.js / Node
+node_modules/
+.next/
+out/
+
+# OS / IDE local files
+.DS_Store
+*.iml
+.idea/
