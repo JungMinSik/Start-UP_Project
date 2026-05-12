@@ -8,10 +8,11 @@ from prompts import (
     RESUME_PROMPT
 )
 import json
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
-client = OpenAI()  # .env의 OPENAI_API_KEY 자동으로 읽어옴
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # .env의 OPENAI_API_KEY 자동으로 읽어옴
 
 
 # ── 1. 첫 질문 생성 ──
