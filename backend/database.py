@@ -1,6 +1,8 @@
 # backend/database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from typing import Generator
+from sqlalchemy.orm import Session
 
 # SQLite 데이터베이스 파일 이름 설정 (VS Code 폴더 안에 생깁니다)
 SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
@@ -12,3 +14,10 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
