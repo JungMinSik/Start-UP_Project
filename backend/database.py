@@ -1,20 +1,34 @@
-# backend/database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from typing import Generator
 from sqlalchemy.orm import Session
 
-# SQLite 데이터베이스 파일 이름 설정 (VS Code 폴더 안에 생깁니다)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
+from dotenv import load_dotenv
+import os
 
-# 커넥션 엔진 생성 (SQLite는 동시에 여러 접근이 안 되므로 check_same_thread 옵션 해제)
+# .env 로드
+load_dotenv()
+
+# 환경변수에서 DB 주소 가져오기
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# PostgreSQL 엔진 생성
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    DATABASE_URL,
+    connect_args={"sslmode": "require"}
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# 세션 생성
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+# 모델 베이스
 Base = declarative_base()
 
+# DB 세션 함수
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:

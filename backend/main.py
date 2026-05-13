@@ -9,6 +9,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from database import SessionLocal
 
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 from ai_logic import (
     generate_first_question,
     generate_followup_question,
@@ -53,6 +56,12 @@ class SaveSessionRequest(BaseModel):
     session_id: str
     role: str
     content: str
+
+# 회원가입 요청 모델 (추가)
+class SignupRequest(BaseModel):
+    userid: str
+    username: str
+    password: str
 
 
 # ── 엔드포인트 ──
@@ -113,3 +122,27 @@ def load_session(session_id: str, db: Session = Depends(get_db)):
     
     # 프론트엔드가 쓰기 편하게 리스트 형태로 변환해서 응답
     return [{"role": msg.role, "content": msg.content} for msg in history]
+
+@app.post("/signup")
+def signup(req: SignupRequest, db: Session = Depends(get_db)):
+
+    # 이미 존재하는 유저 확인
+    existing_user = db.query(models.User).filter(
+        models.User.userid == req.userid
+    ).first()
+
+    if existing_user:
+        raise HTTPException(status_code=400, detail="이미 존재하는 사용자")
+
+    # 비밀번호 암호화
+    hashed_pw = pwd_context.hash(req.password)
+
+    # 새 유저 생성
+    new_user = models.User(
+        userid=req.userid,
+        username=req.username,
+        password_hash=hashed_pw
+    )
+
+    db.add(new_user)
+    db.commit()
