@@ -37,7 +37,8 @@ const handleSendMessage = async (text, file, audioBlob) => {
     body: JSON.stringify({ 
       sessionId: currentSessionId,
       message: text,
-      mode: currentSession.mode 
+      mode: currentSession.mode,
+      resumeContext: currentSession.resumeAfter // 이력서 기반 모의 면접용 데이터 전달
     })
   });
   const data = await response.json();
@@ -73,10 +74,9 @@ const handleSendMessage = async (text, file, audioBlob) => {
 
 ### 리포트 데이터 생성
 *   면접이 종료될 때(`onEndInterview`) `/api/interview/report` 호출.
-*   백엔드에서는 해당 세션의 전체 대화 내역(`Messages Table`)을 분석하여 다음 데이터를 산출:
-    *   `score`: 종합 점수 (0~100)
-    *   `categoryScores`: 커뮤니케이션, 전문성, 태도 등 항목별 점수
-    *   `strengths/weaknesses`: 핵심 강점과 약점 리스트
+*   백엔드에서는 해당 세션의 전체 대화 내역(`Messages Table`)을 분석하여 다음 데이터를 산출 (연산 부하 감소를 위해 점수/차트 로직 제거됨):
+    *   `strengths`: 핵심 강점 리스트 (배열)
+    *   `weaknesses`: 보완해야 할 약점 리스트 (배열)
     *   `feedback`: AI의 종합 조언 문구
 
 ---
@@ -89,6 +89,6 @@ const handleSendMessage = async (text, file, audioBlob) => {
 | `page.tsx` | AI 답변 | `setTimeout` + 고정 문구 | LLM (OpenAI 등) API 연동 |
 | `page.tsx` | 이력서 분석 | 고정된 첨삭 문장들 | 파일 분석 및 LLM 추출 결과 연동 |
 | `ChatInterface.tsx` | 음성 처리 | `audioBlob` 전송만 준비됨 | Whisper(STT) API 연동 |
-| `InterviewReport.tsx` | 점수/피드백 | 가상의 점수(85점 등) | 세션 전체 분석 데이터 연동 |
+| `InterviewReport.tsx` | 피드백 출력 | 가상의 텍스트 피드백 | 세션 전체 분석 데이터 연동 |
 
 ---

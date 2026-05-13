@@ -82,12 +82,6 @@ export default function ResumeComparison({ beforeText, afterText, highlights = [
           </div>
         </div>
       </div>
-
-      {/* 하단 팁 */}
-      <div className="p-4 bg-black/20 border-t border-white/5 flex items-center justify-center gap-3">
-        <Info size={14} className="text-[#697565]" />
-        <p className="text-[10px] text-white/30 font-medium italic">문장 위에 마우스를 올리면 AI의 수정 이유를 확인할 수 있습니다.</p>
-      </div>
     </div>
   );
 }

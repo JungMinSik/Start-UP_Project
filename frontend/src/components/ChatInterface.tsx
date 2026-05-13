@@ -18,9 +18,10 @@ interface ChatInterfaceProps {
   onResetChat?: () => void;
   onEndInterview?: () => void;
   onStop?: () => void;
+  isCompleted?: boolean;
 }
 
-export default function ChatInterface({ messages, onSendMessage, isLoading, placeholder, loadingMessage, interfaceMode, onResetChat, onEndInterview, onStop }: ChatInterfaceProps) {
+export default function ChatInterface({ messages, onSendMessage, isLoading, placeholder, loadingMessage, interfaceMode, onResetChat, onEndInterview, onStop, isCompleted }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -30,50 +31,84 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null); //ㅁㅊ
+  const prevIsLoadingRef = useRef(isLoading);//ㅁㅊ
 
   // 메시지 추가 시 자동 스크롤 하단 고정
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // isLoading이 true에서 false로 바뀌는 순간 = "AI가 답변을 방금 다 작성했다!"
+    if (prevIsLoadingRef.current && !isLoading && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // 마지막 메시지가 AI의 것이고, 현재 화면이 '음성' 모드일 때만 스피커 작동
+      if (lastMessage.role === 'assistant' && interfaceMode === '음성') {
+        const utterance = new SpeechSynthesisUtterance(lastMessage.content);
+        utterance.lang = 'ko-KR'; // 한국어 설정
+        utterance.rate = 1.0;     // 말하기 속도 (1.0이 기본)
+        utterance.pitch = 1.0;    // 목소리 높낮이
+
+        // 브라우저에 내장된 예쁜 한국어 목소리 찾기 (선택 사항)
+        const voices = window.speechSynthesis.getVoices();
+        const koreanVoice = voices.find(voice => voice.lang === 'ko-KR' && voice.name.includes('Google'));
+        if (koreanVoice) utterance.voice = koreanVoice;
+
+        window.speechSynthesis.cancel(); // 혹시 예전에 말하던 게 남아있으면 끊고
+        window.speechSynthesis.speak(utterance); // 새로운 답변 읽기 시작!
+      }
     }
-  }, [messages]);
+    
+    // 현재 로딩 상태를 기억해두기 (다음 턴을 위해)
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, messages, interfaceMode]);
 
-  // 마이크 녹음 로직 (추후 서버 연동 필요) [하드코딩]
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+  // 🎤 Web Speech API를 활용한 진짜 STT 로직 (민식 추가)
+    const startRecording = () => {
+      // 브라우저 지원 여부 확인 (크롬, 엣지 등 지원)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        alert("이 브라우저는 음성 인식을 지원하지 않습니다. 크롬 브라우저를 사용해주세요!");
+        return;
+      }
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ko-KR'; // 한국어 인식
+      recognition.interimResults = false; // 말이 끝나면 한 번에 결과 반환
+      recognitionRef.current = recognition;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        // 녹음된 오디오를 백엔드(Whisper API)로 보내기 위해 전달
-        onSendMessage("", null, audioBlob);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("인식된 텍스트:", transcript);
+        
+        // 🔥 변환된 텍스트를 부모 컴포넌트(서버)로 전송!
+        onSendMessage(transcript, null, null);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("음성 인식 에러:", event.error);
         setIsRecording(false);
-        stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error("마이크 접근 실패:", err);
-      alert("마이크 접근 권한이 필요합니다.");
-    }
-  };
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
-  };
+      // 녹음 시작!
+      recognition.start();
+    };
 
+    const stopRecording = () => {
+      if (recognitionRef.current && isRecording) {
+        recognitionRef.current.stop();
+        setIsRecording(false);
+      }
+    };
+
+  //기존 다연 코드
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) {
@@ -193,10 +228,12 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
 
             <button 
               onClick={isRecording ? stopRecording : startRecording}
+              disabled={isCompleted}
               className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-lg animate-in slide-in-from-bottom-4 duration-500 mb-2 ${
-                isRecording 
+                isCompleted ? 'bg-white/5 text-white/20 opacity-50 cursor-not-allowed' :
+                (isRecording 
                   ? 'bg-red-500 text-white shadow-red-500/20' 
-                  : 'bg-[#697565] text-white hover:scale-[1.01] active:scale-[0.99] shadow-[#697565]/20'
+                  : 'bg-[#697565] text-white hover:scale-[1.01] active:scale-[0.99] shadow-[#697565]/20')
               }`}
             >
               {isRecording ? <Square size={20} fill="currentColor" /> : <Mic size={24} />}
@@ -249,8 +286,9 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
             />
             <button 
               type="button" 
+              disabled={isCompleted}
               onClick={() => onEndInterview ? setShowActionMenu(!showActionMenu) : fileInputRef.current?.click()}
-              className={`p-3 rounded-xl transition-all ${selectedFile || (onEndInterview && showActionMenu) ? 'bg-[#697565] text-white' : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'}`}
+              className={`p-3 rounded-xl transition-all ${isCompleted ? 'opacity-50 cursor-not-allowed text-white/20' : (selectedFile || (onEndInterview && showActionMenu) ? 'bg-[#697565] text-white' : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10')}`}
             >
               {onEndInterview ? (
                 <Plus size={22} className={`transition-transform duration-300 ${showActionMenu ? 'rotate-45' : ''}`} />
@@ -264,16 +302,18 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={placeholder || "메시지를 입력하거나 파일을 첨부하세요..."}
-            className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#697565] transition-all placeholder:text-white/20"
+            disabled={isCompleted}
+            placeholder={isCompleted ? "종료된 대화입니다." : (placeholder || "메시지를 입력하거나 파일을 첨부하세요...")}
+            className={`flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none transition-all ${isCompleted ? 'opacity-50 cursor-not-allowed' : 'focus:border-[#697565] placeholder:text-white/20'}`}
           />
           
           <button 
             type="submit"
-            disabled={(!input.trim() && !selectedFile) && !isLoading}
+            disabled={isCompleted || (!input.trim() && !selectedFile) && !isLoading}
             className={`p-3 rounded-xl transition-all ${
-              isLoading ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 
-              ((!input.trim() && !selectedFile) ? 'bg-white/5 text-white/20' : 'bg-[#697565] text-white hover:scale-105 shadow-lg shadow-[#697565]/20')
+              isCompleted ? 'bg-white/5 text-white/20 opacity-50 cursor-not-allowed' :
+              (isLoading ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 
+              ((!input.trim() && !selectedFile) ? 'bg-white/5 text-white/20' : 'bg-[#697565] text-white hover:scale-105 shadow-lg shadow-[#697565]/20'))
             }`}
           >
             {isLoading ? <Square size={22} fill="currentColor" /> : <Send size={22} />}
