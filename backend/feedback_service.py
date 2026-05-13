@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any, Iterable
 
-from backend.prompts.feedback_prompt import (
+from prompts import (
     FINAL_FEEDBACK_SYSTEM_PROMPT,
     build_feedback_user_prompt,
 )
-from backend.schemas import FinalFeedbackPayload, InterviewMessageItem
+from schemas import FinalFeedbackPayload, InterviewMessageItem
 
 
 def _model_validate(model_cls: type[FinalFeedbackPayload], payload: dict[str, Any]) -> FinalFeedbackPayload:
