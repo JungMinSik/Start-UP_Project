@@ -22,6 +22,9 @@ import {
     Settings,
     Trophy
 } from 'lucide-react';
+import { signup } from "@/lib/api";
+import { login } from "@/lib/api";
+
 
 // 메시지 및 세션 인터페이스 정의
 // 세션 통합 관리 구조: 첨삭 완료된 이력서(resumeAfter) 기반으로 모의 면접 진행됨
@@ -60,8 +63,8 @@ export default function Home() {
     // 메인 상태 관리
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-    const [user, setUser] = useState("");
-    const [username, setUsername] = useState("");
+    const [userid, setUserid] = useState("");
+    // const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
@@ -357,25 +360,27 @@ export default function Home() {
 
     // 미인증 사용자용 인증 화면 [하드코딩]
     if (!isLoggedIn) {
-        const handleAuth = () => {
+        const handleAuth = async () => {
             setError("");
-            if (!username.trim() || !password.trim()) {
+            if (!userid.trim() || !password.trim()) {
                 setError("아이디와 비밀번호를 모두 입력해주세요.");
                 return;
             }
-            const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
             if (authMode === 'signup') {
+                console.log(password);
+                console.log(password.length);
+
                 if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
-                if (storedUsers.some((u: any) => u.username === username)) { setError("이미 존재하는 아이디입니다."); return; }
-                localStorage.setItem('users', JSON.stringify([...storedUsers, { username, password }]));
+                // await signup(userid, username, password);
+                await signup(userid, password);
                 alert("회원가입 완료! 이제 로그인해보세요.");
                 setAuthMode('login');
             } else {
-                const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
-                if (foundUser || (username === 'test' && password === '1234')) {
-                    setUser(username);
+                try {
+                    await login(userid, password);
+                    setUserid(userid);
                     setIsLoggedIn(true);
-                } else {
+                } catch (error) {
                     setError("아이디랑 비밀번호를 다시 확인해주세요.");
                 }
             }
@@ -395,7 +400,7 @@ export default function Home() {
                     <div className="space-y-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-white/30 ml-2">아이디</label>
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-[#697565] transition-all" placeholder="ID를 입력하세요" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-[#697565] transition-all" placeholder="ID를 입력하세요" value={userid} onChange={(e) => setUserid(e.target.value)} />
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-white/30 ml-2">비밀번호</label>
@@ -429,7 +434,7 @@ export default function Home() {
                 onEmptyTrash={() => setModalType('empty_trash')}
                 onRenameSession={updateSessionTitle}
                 onLogout={() => setIsLoggedIn(false)}
-                user={user}
+                user={userid}
             />
 
             <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -446,7 +451,7 @@ export default function Home() {
                     {page === 'home' ? (
                         <div className="min-h-full flex flex-col items-center justify-center space-y-12 animate-in fade-in zoom-in-95 duration-700">
                             <div className="text-center space-y-4">
-                                <h1 className="text-6xl font-bold tracking-tight text-white/90">준비되셨나요, <span className="text-[#697565]">{user}님?</span></h1>
+                                <h1 className="text-6xl font-bold tracking-tight text-white/90">준비되셨나요, <span className="text-[#697565]">{userid}님?</span></h1>
                                 <p className="text-white/30 text-xl">원하시는 모드를 선택하여 시작해보세요.</p>
                             </div>
                             <div className="flex gap-12">

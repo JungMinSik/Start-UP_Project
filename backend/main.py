@@ -21,6 +21,7 @@ from ai_logic import (
 from feedback_service import FinalFeedbackService
 
 app = FastAPI()
+# Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 # Next.js(3000포트)에서 오는 요청 허용
@@ -60,7 +61,7 @@ class SaveSessionRequest(BaseModel):
 # 회원가입 요청 모델 (추가)
 class SignupRequest(BaseModel):
     userid: str
-    username: str
+    # username: str
     password: str
 
 
@@ -126,6 +127,8 @@ def load_session(session_id: str, db: Session = Depends(get_db)):
 @app.post("/signup")
 def signup(req: SignupRequest, db: Session = Depends(get_db)):
 
+    print("회원가입 요청 받음")
+
     # 이미 존재하는 유저 확인
     existing_user = db.query(models.User).filter(
         models.User.userid == req.userid
@@ -140,9 +143,24 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     # 새 유저 생성
     new_user = models.User(
         userid=req.userid,
-        username=req.username,
+        # username=req.username,
         password_hash=hashed_pw
     )
 
     db.add(new_user)
     db.commit()
+    
+    return {"message": "회원가입 성공"}
+
+@app.post("/login")
+def login(req: SignupRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(
+        models.User.userid == req.userid
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="존재하지 않는 사용자")
+
+    if not pwd_context.verify(req.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="잘못된 비밀번호")
+    return {"message": "로그인 성공"}
