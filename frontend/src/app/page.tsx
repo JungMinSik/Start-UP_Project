@@ -62,6 +62,8 @@ export default function Home() {
     const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
     const [user, setUser] = useState("");
     const [username, setUsername] = useState("");
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
@@ -87,7 +89,7 @@ export default function Home() {
     useEffect(() => {
         if (currentSession?.mode === 'resume') {
             // 파일 첨부 문구가 있거나, 혹은 이미 첨삭된 데이터(resumeBefore)가 존재하면 창을 엽니다.
-            const hasFileMarker = currentSession.resumeMessages.some(m => 
+            const hasFileMarker = currentSession.resumeMessages.some(m =>
                 m.content.includes("📄 [파일 첨부:") || m.content.includes("📄 [이력서 내용]")
             );
             const hasData = !!currentSession.resumeBefore;
@@ -232,7 +234,7 @@ export default function Home() {
                         history: historyForApi
                     })
                 });
-                
+
                 if (!res.ok) throw new Error("서버 에러");
                 const data = await res.json();
                 responseMsg = data.answer;
@@ -250,7 +252,7 @@ export default function Home() {
 
                 if (!res.ok) throw new Error("서버 에러");
                 const data = await res.json();
-                
+
                 // 🛠️ [디버깅] F12를 누르면 콘솔창에서 AI가 뭐라고 보냈는지 볼 수 있습니다!
                 console.log("🤖 백엔드에서 온 원본 데이터:", data);
 
@@ -303,8 +305,8 @@ export default function Home() {
                     responseMsg = feedback;
                 } else {
                     // 위 과정을 다 거쳤는데도 실패하면 (AI가 배열을 아예 안 준 경우)
-                    responseMsg = "AI가 올바른 형식으로 답변을 주지 않았습니다. 다시 시도해주세요.\n" + 
-                                  (typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data));
+                    responseMsg = "AI가 올바른 형식으로 답변을 주지 않았습니다. 다시 시도해주세요.\n" +
+                        (typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data));
                 }
             }
 
@@ -339,41 +341,54 @@ export default function Home() {
             : () => { emptyTrash(); setModalType(null); };
 
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <div className="bg-[#3C3D37] w-full max-w-sm p-6 rounded-2xl border border-white/10 shadow-2xl space-y-6">
-                    <div className="flex items-center gap-3 text-red-400">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2D2D]/10 backdrop-blur-sm">
+                <div className="bg-[#CEE5D0] w-full max-w-sm p-6 rounded-2xl border border-white/10 shadow-2xl space-y-6">
+                    <div className="flex items-center gap-3 text-[#8E2424]">
                         <AlertTriangle size={24} />
                         <h3 className="text-xl font-bold">{title}</h3>
                     </div>
-                    <p className="text-white/70 text-sm leading-relaxed">{content}</p>
+                    <p className="text-[#405D4A] text-sm leading-relaxed font-medium">{content}</p>
                     <div className="flex gap-3 pt-2">
-                        <button onClick={onAction} className="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl hover:bg-red-600 transition-colors">{actionLabel}</button>
-                        <button onClick={() => setModalType(null)} className="flex-1 bg-white/10 text-white font-bold py-2.5 rounded-xl hover:bg-white/20 transition-colors">취소</button>
+                        <button onClick={onAction} className="flex-1 bg-[#8E2424] text-white font-bold py-2.5 rounded-xl hover:bg-[#8E2424]/90 transition-colors">{actionLabel}</button>
+                        <button onClick={() => setModalType(null)} className="flex-1 bg-white/10 text-[#405D4A] py-2.5 rounded-xl hover:bg-white/20 transition-colors">취소</button>
                     </div>
                 </div>
             </div>
         );
     };
 
-    // 미인증 사용자용 인증 화면 [하드코딩]
+    // 미인증 사용자용 인증 화면
     if (!isLoggedIn) {
         const handleAuth = () => {
             setError("");
-            if (!username.trim() || !password.trim()) {
-                setError("아이디와 비밀번호를 모두 입력해주세요.");
-                return;
-            }
-            const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
             if (authMode === 'signup') {
+                if (!username.trim() || !name.trim() || !email.trim() || !password.trim()) {
+                    setError("모든 정보를 입력해주세요.");
+                    return;
+                }
+                // 이메일 형식 유효성 검사 추가
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    setError("올바른 이메일 형식이 아닙니다.");
+                    return;
+                }
                 if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
+                const storedUsers = JSON.parse(localStorage.getItem('users') || '[]'); // [하드코딩]
                 if (storedUsers.some((u: any) => u.username === username)) { setError("이미 존재하는 아이디입니다."); return; }
-                localStorage.setItem('users', JSON.stringify([...storedUsers, { username, password }]));
+                if (storedUsers.some((u: any) => u.email === email)) { setError("이미 사용 중인 이메일입니다."); return; }
+
+                localStorage.setItem('users', JSON.stringify([...storedUsers, { username, name, email, password }])); // [하드코딩]
                 alert("회원가입 완료! 이제 로그인해보세요.");
                 setAuthMode('login');
             } else {
-                const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
-                if (foundUser || (username === 'test' && password === '1234')) {
-                    setUser(username);
+                if (!username.trim() || !password.trim()) {
+                    setError("아이디와 비밀번호를 입력해주세요.");
+                    return;
+                }
+                const storedUsers = JSON.parse(localStorage.getItem('users') || '[]'); // [하드코딩]
+                const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password); // [하드코딩]
+                if (foundUser || (username === 'test' && password === '1234')) { // [하드코딩]
+                    setUser(foundUser ? foundUser.name : username);
                     setIsLoggedIn(true);
                 } else {
                     setError("아이디랑 비밀번호를 다시 확인해주세요.");
@@ -382,32 +397,44 @@ export default function Home() {
         };
 
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#252620] text-white animate-in fade-in duration-500">
-                <div className="w-full max-w-md p-8 bg-[#3C3D37] rounded-[32px] border border-white/10 shadow-2xl space-y-8">
+            <div className="flex items-center justify-center min-h-screen bg-[#FCF8E8] text-[#405D4A]">
+                <div className="w-full max-w-md p-8 bg-[#CEE5D0] rounded-[32px] border border-black/40 shadow-2xl space-y-8">
                     <div className="text-center space-y-2">
                         <h2 className="text-3xl font-bold tracking-tight">AI 면접관 & 이력서 첨삭</h2>
                     </div>
-                    <div className="bg-black/30 p-1.5 rounded-2xl flex">
-                        <button onClick={() => setAuthMode('login')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${authMode === 'login' ? 'bg-[#697565] text-white shadow-lg' : 'text-white/30'}`}>로그인</button>
-                        <button onClick={() => setAuthMode('signup')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${authMode === 'signup' ? 'bg-[#697565] text-white shadow-lg' : 'text-white/30'}`}>회원가입</button>
+                    <div className="bg-[#2D2D2D]/30 p-1.5 rounded-2xl flex">
+                        <button onClick={() => setAuthMode('login')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${authMode === 'login' ? 'bg-[#405D4A] text-white shadow-lg' : 'text-[#405D4A] hover:text-[#405D4A]/80'}`}>로그인</button>
+                        <button onClick={() => setAuthMode('signup')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${authMode === 'signup' ? 'bg-[#405D4A] text-white shadow-lg' : 'text-[#405D4A] hover:text-[#405D4A]/80'}`}>회원가입</button>
                     </div>
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1"><AlertTriangle size={14} /> {error}</div>}
+                    {error && <div className="bg-[#8E2424]/10 border border-[#8E2424]/20 text-[#8E2424] px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1"><AlertTriangle size={14} /> {error}</div>}
                     <div className="space-y-4">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-white/30 ml-2">아이디</label>
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-[#697565] transition-all" placeholder="ID를 입력하세요" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <label className="text-xs font-bold text-[#405D4A] ml-2">아이디</label>
+                            <input className="w-full bg-white/50 border border-[#405D4A]/20 rounded-2xl px-5 py-4 outline-none focus:border-[#405D4A] transition-all placeholder:text-[#405D4A]/60 text-[#405D4A] font-medium" placeholder="ID를 입력하세요" value={username} onChange={(e) => setUsername(e.target.value)} />
                         </div>
+                        {authMode === 'signup' && (
+                            <>
+                                <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                                    <label className="text-xs font-bold text-[#405D4A] ml-2">이름</label>
+                                    <input className="w-full bg-white/50 border border-[#405D4A]/20 rounded-2xl px-5 py-4 outline-none focus:border-[#405D4A] transition-all placeholder:text-[#405D4A]/60 text-[#405D4A] font-medium" placeholder="이름을 입력하세요" value={name} onChange={(e) => setName(e.target.value)} />
+                                </div>
+                                <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                                    <label className="text-xs font-bold text-[#405D4A] ml-2">이메일</label>
+                                    <input className="w-full bg-white/50 border border-[#405D4A]/20 rounded-2xl px-5 py-4 outline-none focus:border-[#405D4A] transition-all placeholder:text-[#405D4A]/60 text-[#405D4A] font-medium" type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                                </div>
+                            </>
+                        )}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-white/30 ml-2">비밀번호</label>
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-[#697565] transition-all" type="password" placeholder="비밀번호를 입력하세요" value={password} onChange={(e) => setPassword(e.target.value)} />
+                            <label className="text-xs font-bold text-[#405D4A] ml-2">비밀번호</label>
+                            <input className="w-full bg-white/50 border border-[#405D4A]/20 rounded-2xl px-5 py-4 outline-none focus:border-[#405D4A] transition-all placeholder:text-[#405D4A]/60 text-[#405D4A] font-medium" type="password" placeholder="비밀번호를 입력하세요" value={password} onChange={(e) => setPassword(e.target.value)} />
                         </div>
                         {authMode === 'signup' && (
                             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
-                                <label className="text-xs font-bold text-white/30 ml-2">비밀번호 확인</label>
-                                <input className="w-full bg-black/20 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-[#697565] transition-all" type="password" placeholder="비밀번호를 한 번 더 입력하세요" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                                <label className="text-xs font-bold text-[#405D4A] ml-2">비밀번호 확인</label>
+                                <input className="w-full bg-white/50 border border-[#405D4A]/20 rounded-2xl px-5 py-4 outline-none focus:border-[#405D4A] transition-all placeholder:text-[#405D4A]/60 text-[#405D4A] font-medium" type="password" placeholder="비밀번호를 한 번 더 입력하세요" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                             </div>
                         )}
-                        <button onClick={handleAuth} className="w-full bg-[#697565] py-4 rounded-2xl font-bold hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-[#697565]/20 mt-6">{authMode === 'login' ? '로그인하기' : '가입하기'}</button>
+                        <button onClick={handleAuth} className="w-full bg-[#405D4A] py-4 rounded-2xl font-black text-lg text-white shadow-xl shadow-[#405D4A]/30 mt-6 tracking-tight active:scale-[0.98] transition-all">{authMode === 'login' ? '로그인하기' : '가입하기'}</button>
                     </div>
                 </div>
             </div>
@@ -416,7 +443,7 @@ export default function Home() {
 
     // 메인 대시보드 화면
     return (
-        <div className="flex h-screen bg-[#252620] text-white overflow-hidden font-sans">
+        <div className="flex h-screen bg-[#FCF8E8] text-[#405D4A] overflow-hidden font-sans">
             {renderModal()}
 
             <Sidebar
@@ -434,44 +461,44 @@ export default function Home() {
 
             <main className="flex-1 flex flex-col overflow-hidden relative">
                 {/* 현재 위치 네비게이션 */}
-                <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-black/5 shrink-0">
-                    <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+                <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#2D2D2D]/5 shrink-0">
+                    <div className="flex items-center gap-2 text-[#405D4A] text-xs font-bold uppercase tracking-widest">
                         <span>AI 면접관</span>
-                        <ChevronRight size={12} />
-                        <span className="text-white/80">{page === 'home' ? '홈' : currentSession?.title}</span>
+                        <ChevronRight size={14} />
+                        <span className="text-[#405D4A]">{page === 'home' ? '홈' : currentSession?.title}</span>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scroll-smooth">
+                <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[#405D4A]/20 scroll-smooth">
                     {page === 'home' ? (
                         <div className="min-h-full flex flex-col items-center justify-center space-y-12 animate-in fade-in zoom-in-95 duration-700">
                             <div className="text-center space-y-4">
-                                <h1 className="text-6xl font-bold tracking-tight text-white/90">준비되셨나요, <span className="text-[#697565]">{user}님?</span></h1>
-                                <p className="text-white/30 text-xl">원하시는 모드를 선택하여 시작해보세요.</p>
+                                <h1 className="text-6xl font-bold tracking-tight text-[#405D4A]">준비되셨나요, <span className="text-[#8B6E50]">{user}님?</span></h1>
+                                <p className="text-[#405D4A]/80 text-xl">원하시는 모드를 선택하여 시작해보세요.</p>
                             </div>
                             <div className="flex gap-12">
-                                <button onClick={() => createSession("새로운 모의 면접", 'interview')} className="group relative w-80 h-96 bg-[#3C3D37] rounded-[48px] border border-white/5 hover:border-[#697565]/50 transition-all hover:shadow-2xl flex flex-col items-center justify-center space-y-8">
-                                    <div className="w-24 h-24 rounded-3xl bg-[#697565]/10 flex items-center justify-center text-[#697565] group-hover:scale-110 transition-transform"><Monitor size={48} /></div>
+                                <button onClick={() => createSession("새로운 모의 면접", 'interview')} className="group relative w-80 h-96 bg-[#CEE5D0] rounded-[48px] border border-[#2D2D2D]/20 shadow-[0_20px_50px_rgba(64,93,74,0.15)] flex flex-col items-center justify-center space-y-8">
+                                    <div className="w-24 h-24 rounded-3xl bg-[#2D2D2D]/10 flex items-center justify-center text-[#405D4A] group-hover:scale-110 transition-transform"><Monitor size={48} /></div>
                                     <div className="text-center">
-                                        <h3 className="text-2xl font-bold text-white/80">AI 모의 면접</h3>
-                                        <p className="text-white/30 text-sm mt-2 font-medium uppercase tracking-widest">Start Interview</p>
+                                        <h3 className="text-2xl font-bold text-[#405D4A]">AI 모의 면접</h3>
+                                        <p className="text-[#405D4A]/80 text-sm mt-2 font-medium uppercase tracking-widest">Start Interview</p>
                                     </div>
-                                    <ChevronRight className="absolute bottom-12 text-white/10 group-hover:text-[#697565]" />
+                                    <ChevronRight className="absolute bottom-12 text-[#405D4A]/10 group-hover:text-[#405D4A]" />
                                 </button>
-                                <button onClick={() => createSession("새로운 이력서 첨삭", 'resume')} className="group relative w-80 h-96 bg-[#3C3D37] rounded-[48px] border border-white/5 hover:border-[#697565]/50 transition-all hover:shadow-2xl flex flex-col items-center justify-center space-y-8">
-                                    <div className="w-24 h-24 rounded-3xl bg-[#697565]/10 flex items-center justify-center text-[#697565] group-hover:scale-110 transition-transform"><FileText size={48} /></div>
+                                <button onClick={() => createSession("새로운 이력서 첨삭", 'resume')} className="group relative w-80 h-96 bg-[#CEE5D0] rounded-[48px] border border-black/40 shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col items-center justify-center space-y-8">
+                                    <div className="w-24 h-24 rounded-3xl bg-[#2D2D2D]/10 flex items-center justify-center text-[#405D4A] group-hover:scale-110 transition-transform"><FileText size={48} /></div>
                                     <div className="text-center">
-                                        <h3 className="text-2xl font-bold text-white/80">이력서 첨삭</h3>
-                                        <p className="text-white/30 text-sm mt-2 font-medium uppercase tracking-widest">Resume Correction</p>
+                                        <h3 className="text-2xl font-bold text-[#405D4A]">이력서 첨삭</h3>
+                                        <p className="text-[#405D4A]/80 text-sm mt-2 font-medium uppercase tracking-widest">Resume Correction</p>
                                     </div>
-                                    <ChevronRight className="absolute bottom-12 text-white/10 group-hover:text-[#697565]" />
+                                    <ChevronRight className="absolute bottom-12 text-[#405D4A]/10 group-hover:text-[#405D4A]" />
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <div className="flex flex-col space-y-8 w-full max-w-[1800px] mx-auto pb-10">
                             {/* 모드 전환 탭 (이력서 첨삭 / AI 면접) */}
-                            <div className="flex gap-1 bg-black/20 p-2 rounded-2xl w-fit border border-white/5 shrink-0 z-10">
+                            <div className="flex gap-1 bg-[#2D2D2D]/20 p-2 rounded-2xl w-fit border border-white/5 shrink-0 z-10">
                                 <button
                                     onClick={() => setSessions(prev => prev.map(s => {
                                         if (s.id === currentSessionId && s.mode !== 'resume') {
@@ -494,7 +521,7 @@ export default function Home() {
                                         }
                                         return s;
                                     }))}
-                                    className={`px-12 py-4 rounded-xl text-base font-bold transition-all ${currentSession?.mode === 'resume' ? 'bg-[#697565] text-white shadow-xl' : 'text-white/40 hover:text-white'}`}
+                                    className={`px-12 py-4 rounded-xl text-base font-bold transition-all ${currentSession?.mode === 'resume' ? 'bg-[#405D4A] text-white shadow-xl' : 'text-[#405D4A]/80 hover:text-[#405D4A]'}`}
                                 >이력서 첨삭</button>
                                 <button
                                     onClick={() => setSessions(prev => prev.map(s => {
@@ -513,19 +540,19 @@ export default function Home() {
                                         }
                                         return s;
                                     }))}
-                                    className={`px-12 py-4 rounded-xl text-base font-bold transition-all ${currentSession?.mode === 'interview' ? 'bg-[#697565] text-white shadow-xl' : 'text-white/40 hover:text-white'}`}
+                                    className={`px-12 py-4 rounded-xl text-base font-bold transition-all ${currentSession?.mode === 'interview' ? 'bg-[#405D4A] text-white shadow-xl' : 'text-[#405D4A]/80 hover:text-[#405D4A]'}`}
                                 >AI 모의 면접</button>
                             </div>
                             {/* 상세 설정 영역 (인터페이스, 스타일, 성별 등) */}
-                            <div className="bg-[#3C3D37]/50 rounded-[32px] border border-white/5 shadow-2xl backdrop-blur-md shrink-0 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
+                            <div className="bg-[#CEE5D0] rounded-[32px] border border-black/20 shadow-2xl backdrop-blur-md shrink-0 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
                                 <div className="px-8 h-[90px] flex items-center justify-between gap-8">
                                     <div className="flex items-center gap-10">
                                         {currentSession?.mode === 'interview' ? (
                                             <>
                                                 {/* 기본 설정: 인터페이스, 스타일 */}
                                                 <div className="flex items-center gap-4 shrink-0">
-                                                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><Monitor size={14} /> 인터페이스</span>
-                                                    <div className="flex bg-black/20 p-1 rounded-xl">
+                                                    <span className="text-sm font-bold text-[#405D4A] uppercase tracking-[0.1em] flex items-center gap-2 whitespace-nowrap"><Monitor size={16} /> 인터페이스</span>
+                                                    <div className="flex bg-[#2D2D2D]/20 p-1 rounded-xl">
                                                         {['텍스트', '음성'].map(opt => (
                                                             <button
                                                                 key={opt}
@@ -536,15 +563,15 @@ export default function Home() {
                                                                     }
                                                                     return s;
                                                                 }))}
-                                                                className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.interviewInterface === opt ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
+                                                                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${currentSession?.interviewInterface === opt ? 'bg-[#405D4A] text-white shadow-md' : 'text-[#405D4A]/80 hover:text-[#405D4A]'}`}
                                                             >{opt}</button>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-4 shrink-0">
-                                                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap"><LayoutIcon size={14} /> 스타일</span>
-                                                    <div className="flex bg-black/20 p-1 rounded-xl">
+                                                    <span className="text-sm font-bold text-[#405D4A] uppercase tracking-[0.1em] flex items-center gap-2 whitespace-nowrap"><LayoutIcon size={16} /> 스타일</span>
+                                                    <div className="flex bg-[#2D2D2D]/20 p-1 rounded-xl">
                                                         {['일반', '압박'].map(opt => (
                                                             <button
                                                                 key={opt}
@@ -557,7 +584,7 @@ export default function Home() {
                                                                     }
                                                                     return s;
                                                                 }))}
-                                                                className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.style.startsWith(opt) ? 'bg-[#697565] text-white shadow-md' : 'text-white/40 hover:text-white'}`}
+                                                                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${currentSession?.style.startsWith(opt) ? 'bg-[#405D4A] text-white shadow-md' : 'text-[#405D4A]/80 hover:text-[#405D4A]'}`}
                                                             >{opt}</button>
                                                         ))}
                                                     </div>
@@ -565,7 +592,7 @@ export default function Home() {
                                             </>
                                         ) : (
                                             <div className="flex items-center gap-4 shrink-0">
-                                                <span className="text-xs font-bold text-white/60 uppercase tracking-[0.2em] flex items-center gap-2"><Monitor size={16} className="text-[#697565]" /> 이력서 첨삭: 텍스트 대화 전용</span>
+                                                <span className="text-base font-bold text-[#405D4A] uppercase tracking-[0.1em] flex items-center gap-3"><Monitor size={20} className="text-[#405D4A]" /> 이력서 첨삭: 텍스트 대화 전용</span>
                                             </div>
                                         )}
                                     </div>
@@ -573,28 +600,28 @@ export default function Home() {
                                     <div className="flex items-center gap-6">
                                         {currentSession?.mode === 'interview' && (
                                             <div className="flex items-center gap-4 shrink-0">
-                                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">화상 모드</span>
-                                                <button onClick={() => setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, videoMode: !s.videoMode } : s))} className={`px-8 py-2 rounded-xl text-[11px] font-bold transition-all ${currentSession?.videoMode ? 'bg-red-500/80 text-white' : 'bg-[#697565] text-white'}`}>{currentSession?.videoMode ? 'OFF' : 'ON'}</button>
+                                                <span className="text-sm font-bold text-[#405D4A] uppercase tracking-[0.1em]">화상 모드</span>
+                                                <button onClick={() => setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, videoMode: !s.videoMode } : s))} className={`px-10 py-2.5 rounded-xl text-sm font-black transition-all ${currentSession?.videoMode ? 'bg-red-500/90 text-white shadow-lg shadow-red-500/20' : 'bg-[#2D2D2D] text-white'}`}>{currentSession?.videoMode ? 'ON' : 'OFF'}</button>
                                             </div>
                                         )}
                                         {currentSession?.mode === 'resume' && (
-                                            <button onClick={() => { if (window.confirm("초기화하시겠습니까?")) setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, resumeMessages: [s.resumeMessages[0]] } : s)); }} className="flex items-center gap-2 px-5 py-2 rounded-xl text-[11px] font-bold bg-white/5 text-white/90 hover:bg-white/10 border border-white/5"><RotateCcw size={14} className="text-[#697565]" /> 초기화</button>
+                                            <button onClick={() => { if (window.confirm("초기화하시겠습니까?")) setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, resumeMessages: [s.resumeMessages[0]] } : s)); }} className="flex items-center gap-3 px-6 py-3 rounded-2xl text-sm font-bold bg-[#405D4A]/10 text-[#405D4A] hover:bg-[#405D4A]/20 border border-[#405D4A]/20 transition-all"><RotateCcw size={18} className="text-[#405D4A]" /> 대화 초기화</button>
                                         )}
                                     </div>
                                 </div>
 
                                 {currentSession?.mode === 'interview' && (
                                     <details className="border-t border-white/5 group">
-                                        <summary className="h-10 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group-open:bg-black/20">
-                                            <div className="flex items-center gap-2 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] group-hover:text-white/40 transition-colors">
-                                                <Settings size={12} /> 추가 설정 및 종료
-                                                <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                                        <summary className="h-12 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group-open:bg-[#2D2D2D]/20">
+                                            <div className="flex items-center gap-2 text-sm font-bold text-[#405D4A]">
+                                                <Settings size={16} /> 추가 설정 및 종료
+                                                <ChevronDown size={16} className="group-open:rotate-180 transition-transform" />
                                             </div>
                                         </summary>
-                                        <div className="p-6 bg-black/20 flex items-center justify-center gap-12 animate-in slide-in-from-top-2 duration-300">
+                                        <div className="p-6 bg-[#2D2D2D]/20 flex items-center justify-center gap-12 animate-in slide-in-from-top-2 duration-300">
                                             <div className="flex items-center gap-4">
-                                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">면접관 성별</span>
-                                                <div className="flex bg-black/20 p-1 rounded-xl">
+                                                <span className="text-sm font-bold text-[#405D4A] uppercase tracking-[0.1em]">면접관 성별</span>
+                                                <div className="flex bg-[#2D2D2D]/20 p-1 rounded-xl">
                                                     {[{ label: '여성', id: 'f' }, { label: '남성', id: 'm' }].map(opt => (
                                                         <button
                                                             key={opt.id}
@@ -606,7 +633,7 @@ export default function Home() {
                                                                 }
                                                                 return s;
                                                             }))}
-                                                            className={`px-6 py-2 rounded-lg text-[11px] font-bold transition-all ${currentSession?.interviewerId?.endsWith(opt.id) ? 'bg-[#697565] text-white' : 'text-white/40 hover:text-white'}`}
+                                                            className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${currentSession?.interviewerId?.endsWith(opt.id) ? 'bg-[#405D4A] text-white shadow-md' : 'text-[#405D4A]/80 hover:text-[#405D4A]'}`}
                                                         >{opt.label}</button>
                                                     ))}
                                                 </div>
@@ -617,10 +644,10 @@ export default function Home() {
                                                     e.preventDefault();
                                                     if (!currentSession) return;
                                                     if (window.confirm("면접을 종료하고 진짜 AI 피드백을 받으시겠습니까?")) {
-                                                        
+
                                                         setLoadingMessage("최종 면접 분석 리포트를 생성 중입니다...");
                                                         setIsLoading(true);
-                                                        
+
                                                         try {
                                                             // 📡 백엔드의 갓벽한 피드백 로직 호출!
                                                             const res = await fetch("http://localhost:8000/interview/feedback", {
@@ -633,12 +660,12 @@ export default function Home() {
                                                             });
                                                             const data = await res.json();
                                                             const fb = data.feedback; // team member's payload
-                                                            
+
                                                             setSessions(prev => prev.map(s => {
                                                                 if (s.id === currentSessionId) {
-                                                                    return { 
-                                                                        ...s, 
-                                                                        isCompleted: true, 
+                                                                    return {
+                                                                        ...s,
+                                                                        isCompleted: true,
                                                                         interviewMessages: [...s.interviewMessages, { role: 'assistant', content: "⚠️ 면접이 정상적으로 종료되었습니다. 리포트를 확인해 주세요." }],
                                                                         // 실제 데이터 매핑
                                                                         feedbackData: {
@@ -658,9 +685,9 @@ export default function Home() {
                                                         }
                                                     }
                                                 }}
-                                                className="px-8 py-3 bg-gradient-to-r from-[#697565] to-[#3C3D37] text-white text-[12px] font-bold rounded-xl shadow-xl hover:scale-105 transition-all flex items-center gap-3"
+                                                className="px-10 py-4 bg-[#405D4A] text-white text-sm font-black rounded-xl shadow-xl hover:scale-105 transition-all flex items-center gap-3"
                                             >
-                                                <Trophy size={16} className="text-yellow-400" /> 면접 분석 및 종료
+                                                <Trophy size={20} className="text-yellow-400" /> 면접 분석 및 종료
                                             </button>
                                         </div>
                                     </details>
@@ -671,18 +698,18 @@ export default function Home() {
                             <div className="flex gap-10 h-[850px]">
                                 {currentSession?.mode === 'interview' && currentSession?.videoMode && (
                                     <div className="w-[45%] flex flex-col animate-in fade-in slide-in-from-left-4 duration-500 shrink-0">
-                                        <div className="bg-[#3C3D37]/30 rounded-[56px] border border-white/5 p-12 flex flex-col shadow-2xl relative overflow-hidden h-[850px]">
-                                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#697565]/30 to-transparent"></div>
+                                        <div className="bg-[#FCF8E8] rounded-[56px] border border-black/20 p-12 flex flex-col shadow-2xl relative overflow-hidden h-[850px]">
+                                            <div className="absolute top-0 left-0 w-full h-1 bg-[#2D2D2D]/30"></div>
                                             <div className="mb-8 flex items-center justify-between shrink-0">
                                                 <div>
-                                                    <h2 className="text-3xl font-bold text-white/90 tracking-tight">{currentSession?.mode === 'interview' ? 'AI 모의 면접' : '이력서 상담'}</h2>
+                                                    <h2 className="text-3xl font-bold text-[#405D4A]/90 tracking-tight">{currentSession?.mode === 'interview' ? 'AI 모의 면접' : '이력서 상담'}</h2>
                                                     <div className="flex items-center gap-3 mt-3">
                                                         <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
-                                                        <span className="text-xs font-bold text-white/20 uppercase tracking-[0.3em]">Interviewer Online</span>
+                                                        <span className="text-xs font-bold text-[#405D4A] uppercase tracking-[0.3em]">Interviewer Online</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-[#697565]/20 px-6 py-2.5 rounded-2xl border border-[#697565]/30">
-                                                    <span className="text-sm font-bold text-[#697565] uppercase tracking-widest">{currentSession?.style}</span>
+                                                <div className="bg-[#2D2D2D]/50 px-6 py-2.5 rounded-2xl border border-[#2D2D2D]">
+                                                    <span className="text-sm font-bold text-[#405D4A]">{currentSession?.style}</span>
                                                 </div>
                                             </div>
                                             <div className="flex-1 flex items-center justify-center">
@@ -697,14 +724,14 @@ export default function Home() {
 
                                 <div className={`flex flex-col min-w-0 h-[850px] animate-in fade-in duration-500 transition-all ${showComparison ? 'w-[45%]' : 'flex-1'}`}>
                                     {currentSession?.mode === 'resume' && (
-                                        <details className="mb-6 group bg-[#3C3D37]/40 border border-white/5 rounded-[32px] overflow-hidden transition-all shrink-0">
-                                            <summary className="p-6 cursor-pointer list-none flex items-center justify-between font-bold text-white/90 text-sm tracking-tight">
+                                        <details className="mb-6 group bg-[#CEE5D0]/40 border border-white/5 rounded-[32px] overflow-hidden transition-all shrink-0">
+                                            <summary className="p-6 cursor-pointer list-none flex items-center justify-between font-bold text-[#405D4A]/90 text-sm tracking-tight">
                                                 <div className="flex items-center gap-3">
-                                                    <Info size={20} className="text-[#697565]" /> 이용 가이드 및 팁
+                                                    <Info size={20} className="text-[#405D4A]" /> 이용 가이드 및 팁
                                                 </div>
                                                 <ChevronDown size={18} className="group-open:rotate-180 transition-transform opacity-50" />
                                             </summary>
-                                            <div className="px-8 pb-6 text-sm text-white/80 space-y-2 border-t border-white/5 pt-5 leading-relaxed">
+                                            <div className="px-8 pb-6 text-sm text-[#405D4A] space-y-2 border-t border-white/5 pt-5 leading-relaxed">
                                                 <p>• 구체적인 에피소드를 말씀해 주실수록 AI가 더 정교한 질문을 던집니다.</p>
                                                 <p>• 이력서 문구 수정을 원하시면 '이 문장을 더 임팩트 있게 고쳐줘'라고 입력해 보세요.</p>
                                                 <p>• 면접 연습 시에는 실제 목소리로 대답하는 '음성 모드'를 적극 추천합니다!</p>
@@ -712,7 +739,7 @@ export default function Home() {
                                         </details>
                                     )}
 
-                                    <div className="flex-1 bg-[#3C3D37]/20 rounded-[56px] border border-white/5 overflow-hidden shadow-xl flex flex-col">
+                                    <div className="flex-1 bg-[#CEE5D0]/90 rounded-[56px] border border-black/20 overflow-hidden shadow-xl flex flex-col">
                                         <ChatInterface
                                             messages={currentSession?.mode === 'interview' ? (currentSession?.interviewMessages || []) : (currentSession?.resumeMessages || [])}
                                             onSendMessage={handleSendMessage}

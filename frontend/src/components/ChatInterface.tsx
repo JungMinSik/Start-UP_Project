@@ -161,33 +161,33 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
 
   return (
     <div 
-      className="flex flex-col h-full bg-black/10 rounded-3xl border border-white/5 overflow-hidden shadow-inner relative"
+      className="flex flex-col h-full bg-[#FCF8E8] rounded-3xl border border-black/10 overflow-hidden shadow-inner relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {isDragging && (
-        <div className="absolute inset-0 z-50 bg-[#697565]/20 backdrop-blur-md border-4 border-dashed border-[#697565] rounded-[24px] flex flex-col items-center justify-center animate-in fade-in duration-200 pointer-events-none">
-          <div className="w-20 h-20 bg-[#697565] rounded-full flex items-center justify-center text-white mb-4 shadow-2xl">
+        <div className="absolute inset-0 z-50 bg-[#405D4A]/20 backdrop-blur-md border-4 border-dashed border-[#4A4A4A] rounded-[24px] flex flex-col items-center justify-center animate-in fade-in duration-200 pointer-events-none">
+          <div className="w-20 h-20 bg-[#405D4A] rounded-full flex items-center justify-center text-white mb-4 shadow-2xl">
             <Paperclip size={32} />
           </div>
-          <p className="text-xl font-bold text-white tracking-tight">파일을 여기에 놓으세요</p>
-          <p className="text-white/50 text-sm mt-2">PDF 또는 TXT 파일만 가능합니다.</p>
+          <p className="text-xl font-bold text-[#405D4A] tracking-tight">파일을 여기에 놓으세요</p>
+          <p className="text-[#405D4A]/70 text-sm mt-2">PDF 또는 TXT 파일만 가능합니다.</p>
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-white/10">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-[#4A4A4A]/10">
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-              m.role === 'user' ? 'bg-[#697565] text-white' : 'bg-[#3C3D37] border border-white/10 text-[#697565]'
+              m.role === 'user' ? 'bg-[#405D4A] text-white' : 'bg-[#CEE5D0] border border-[#405D4A]/10 text-[#405D4A]'
             }`}>
               {m.role === 'user' ? <User size={20} /> : <Bot size={20} />}
             </div>
-            <div className={`max-w-[75%] px-5 py-4 rounded-[24px] text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+            <div className={`max-w-[80%] px-5 py-4 rounded-[24px] text-sm font-bold leading-relaxed shadow-sm ${
               m.role === 'user' 
-                ? 'bg-[#697565] text-white rounded-tr-none' 
-                : 'bg-[#3C3D37] text-white/90 border border-white/5 rounded-tl-none'
+                ? 'bg-[#405D4A] text-white rounded-tr-none' 
+                : 'bg-[#CEE5D0] text-[#405D4A] border border-[#405D4A]/5 rounded-tl-none'
             }`}>
               {m.content}
             </div>
@@ -195,26 +195,25 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
         ))}
         {isLoading && (
           <div className="flex gap-4 animate-pulse">
-            <div className="w-10 h-10 rounded-2xl bg-[#3C3D37] border border-white/10 flex items-center justify-center text-[#697565]">
+            <div className="w-10 h-10 rounded-2xl bg-[#CEE5D0] border border-black/10 flex items-center justify-center text-[#405D4A]">
               <Bot size={20} />
             </div>
-            <div className="bg-[#3C3D37] px-5 py-4 rounded-[24px] rounded-tl-none text-xs text-white/40 italic">
+            <div className="bg-[#CEE5D0] px-5 py-4 rounded-[24px] rounded-tl-none text-xs text-[#405D4A]/90 italic">
               {loadingMessage || "AI가 생각 중입니다..."}
             </div>
           </div>
         )}
       </div>
 
-      <div className="p-6 bg-[#3C3D37]/30 border-t border-white/5 space-y-4">
+      <div className="p-6 bg-white border-t border-[#4A4A4A]/10 space-y-4">
         {interfaceMode === '음성' && (
           <div className="relative group">
-            {/* 녹음 중 비주얼라이저 애니메이션 */}
             {isRecording && (
-              <div className="absolute -top-16 left-0 right-0 flex items-center justify-center gap-1 h-12 bg-[#3C3D37]/80 backdrop-blur-md rounded-2xl border border-white/10 animate-in slide-in-from-bottom-2 duration-300">
+              <div className="absolute -top-16 left-0 right-0 flex items-center justify-center gap-1 h-12 bg-[#CEE5D0]/80 backdrop-blur-md rounded-2xl border border-[#4A4A4A]/10 animate-in slide-in-from-bottom-2 duration-300">
                 {[...Array(15)].map((_, i) => (
                   <div 
                     key={i} 
-                    className="w-1 bg-[#697565] rounded-full animate-voice-bar shadow-[0_0_10px_rgba(105,117,101,0.3)]"
+                    className="w-1 bg-[#405D4A] rounded-full animate-voice-bar shadow-[0_0_10px_rgba(74,74,74,0.3)]"
                     style={{ 
                       height: '20%',
                       animationDelay: `${i * 0.05}s`,
@@ -222,7 +221,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
                     }}
                   ></div>
                 ))}
-                <span className="ml-4 text-[10px] font-bold text-white/60 uppercase tracking-widest animate-pulse">Recording...</span>
+                <span className="ml-4 text-[10px] font-bold text-[#405D4A]/90 uppercase tracking-widest animate-pulse">Recording...</span>
               </div>
             )}
 
@@ -230,10 +229,10 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isCompleted}
               className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-lg animate-in slide-in-from-bottom-4 duration-500 mb-2 ${
-                isCompleted ? 'bg-white/5 text-white/20 opacity-50 cursor-not-allowed' :
+                isCompleted ? 'bg-[#405D4A]/5 text-[#405D4A]/20 opacity-50 cursor-not-allowed' :
                 (isRecording 
                   ? 'bg-red-500 text-white shadow-red-500/20' 
-                  : 'bg-[#697565] text-white hover:scale-[1.01] active:scale-[0.99] shadow-[#697565]/20')
+                  : 'bg-[#405D4A] text-white hover:scale-[1.01] active:scale-[0.99] shadow-[#6D8196]/20')
               }`}
             >
               {isRecording ? <Square size={20} fill="currentColor" /> : <Mic size={24} />}
@@ -243,36 +242,35 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
         )}
 
         {selectedFile && (
-          <div className="flex items-center gap-2 bg-[#697565]/20 border border-[#697565]/40 rounded-xl px-3 py-2 w-fit animate-in zoom-in-95 duration-200">
-            <FileText size={16} className="text-[#697565]" />
-            <span className="text-xs font-bold text-white/80">{selectedFile.name}</span>
+          <div className="flex items-center gap-2 bg-[#405D4A]/10 border border-[#4A4A4A]/20 rounded-xl px-3 py-2 w-fit animate-in zoom-in-95 duration-200">
+            <FileText size={16} className="text-[#405D4A]" />
+            <span className="text-xs font-bold text-[#405D4A]">{selectedFile.name}</span>
             <button 
               onClick={() => setSelectedFile(null)}
-              className="p-1 hover:bg-black/20 rounded-full transition-colors"
+              className="p-1 hover:bg-[#405D4A]/20 rounded-full transition-colors"
             >
-              <X size={14} className="text-white/40" />
+              <X size={14} className="text-[#405D4A]/40" />
             </button>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
           <div className="relative">
-            {/* 면접 모드 전용 액션 메뉴 [하드코딩] */}
             {onEndInterview && showActionMenu && (
-              <div className="absolute bottom-full left-0 mb-3 flex flex-col gap-1 p-1.5 bg-[#3C3D37] border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-2 duration-200 z-[70] min-w-[140px]">
+              <div className="absolute bottom-full left-0 mb-3 flex flex-col gap-1 p-1.5 bg-white border border-[#4A4A4A]/10 rounded-2xl shadow-xl animate-in slide-in-from-bottom-2 duration-200 z-[70] min-w-[140px]">
                 <button 
                   type="button"
                   onClick={() => { onEndInterview(); setShowActionMenu(false); }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white/90 hover:bg-[#697565] rounded-xl transition-all whitespace-nowrap text-left group"
+                  className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#405D4A]/90 hover:bg-[#405D4A]/5 rounded-xl transition-all whitespace-nowrap text-left group"
                 >
-                  <CheckCircle2 size={14} className="text-[#697565] group-hover:text-white" /> 면접 종료
+                  <CheckCircle2 size={14} className="text-[#405D4A]/60 group-hover:text-[#405D4A]" /> 면접 종료
                 </button>
                 <button 
                   type="button"
                   onClick={() => { onResetChat?.(); setShowActionMenu(false); }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-red-400 hover:bg-red-400/10 rounded-xl transition-all whitespace-nowrap text-left"
+                  className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#405D4A] hover:bg-[#405D4A]/5 rounded-xl transition-all whitespace-nowrap text-left group"
                 >
-                  <RotateCcw size={14} /> 대화 초기화
+                  <RotateCcw size={14} className="text-[#405D4A]" /> 대화 초기화
                 </button>
               </div>
             )}
@@ -288,12 +286,12 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
               type="button" 
               disabled={isCompleted}
               onClick={() => onEndInterview ? setShowActionMenu(!showActionMenu) : fileInputRef.current?.click()}
-              className={`p-3 rounded-xl transition-all ${isCompleted ? 'opacity-50 cursor-not-allowed text-white/20' : (selectedFile || (onEndInterview && showActionMenu) ? 'bg-[#697565] text-white' : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10')}`}
+              className={`p-3 rounded-xl transition-all border-2 ${isCompleted ? 'opacity-50 cursor-not-allowed border-[#4A4A4A]/20 text-[#405D4A]/20' : (selectedFile || (onEndInterview && showActionMenu) ? 'bg-[#405D4A] border-[#4A4A4A] text-white shadow-lg' : 'bg-white border-[#4A4A4A]/20 text-[#405D4A]/60 hover:text-[#405D4A] hover:bg-[#405D4A]/5')}`}
             >
               {onEndInterview ? (
-                <Plus size={22} className={`transition-transform duration-300 ${showActionMenu ? 'rotate-45' : ''}`} />
+                <Plus size={22} strokeWidth={3} className={`transition-transform duration-300 ${showActionMenu ? 'rotate-45' : ''}`} />
               ) : (
-                <Paperclip size={22} />
+                <Paperclip size={22} strokeWidth={3} />
               )}
             </button>
           </div>
@@ -304,19 +302,19 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, plac
             onChange={(e) => setInput(e.target.value)}
             disabled={isCompleted}
             placeholder={isCompleted ? "종료된 대화입니다." : (placeholder || "메시지를 입력하거나 파일을 첨부하세요...")}
-            className={`flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none transition-all ${isCompleted ? 'opacity-50 cursor-not-allowed' : 'focus:border-[#697565] placeholder:text-white/20'}`}
+            className={`flex-1 bg-[#2D2D2D]/15 border border-black/10 rounded-2xl px-5 py-4 text-sm text-[#405D4A] focus:outline-none transition-all ${isCompleted ? 'opacity-50 cursor-not-allowed' : 'focus:border-[#6D8196] placeholder:text-[#405D4A]/80'}`}
           />
           
           <button 
             type="submit"
             disabled={isCompleted || (!input.trim() && !selectedFile) && !isLoading}
-            className={`p-3 rounded-xl transition-all ${
-              isCompleted ? 'bg-white/5 text-white/20 opacity-50 cursor-not-allowed' :
-              (isLoading ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 
-              ((!input.trim() && !selectedFile) ? 'bg-white/5 text-white/20' : 'bg-[#697565] text-white hover:scale-105 shadow-lg shadow-[#697565]/20'))
+            className={`p-3 rounded-xl transition-all border-2 ${
+              isCompleted ? 'bg-white/5 border-black/20 text-[#405D4A]/20 opacity-50 cursor-not-allowed' :
+              (isLoading ? 'bg-red-500/20 border-red-500/80 text-red-500 hover:bg-red-500/30' : 
+              ((!input.trim() && !selectedFile) ? 'bg-white/5 border-black/20 text-[#405D4A]/20' : 'bg-[#405D4A] border-black/20 text-white hover:scale-105 shadow-lg shadow-[#6D8196]/20'))
             }`}
           >
-            {isLoading ? <Square size={22} fill="currentColor" /> : <Send size={22} />}
+            {isLoading ? <Square size={22} fill="currentColor" strokeWidth={3.5} /> : <Send size={22} strokeWidth={3.5} />}
           </button>
         </form>
       </div>
