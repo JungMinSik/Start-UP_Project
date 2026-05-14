@@ -10,10 +10,10 @@ interface InterviewerSectionProps {
 export default function InterviewerSection({ isAiTalking, interviewerId = 'normal_f' }: InterviewerSectionProps) {
   // 면접관 캐릭터 이미지 매핑
   const avatarImages = {
-    normal_f: '/avatars/normal_f.png',
-    normal_m: '/avatars/normal_m.png',
-    pressure_f: '/avatars/pressure_f.png',
-    pressure_m: '/avatars/pressure_m.png',
+    normal_f: '/normal_f.png',
+    normal_m: '/normal_m.png',
+    pressure_f: '/pressure_f.png',
+    pressure_m: '/pressure_m.png',
   };
 
   const avatarSrc = avatarImages[interviewerId] || avatarImages.normal_f;
@@ -65,7 +65,7 @@ export default function InterviewerSection({ isAiTalking, interviewerId = 'norma
       `}</style>
 
       {/* 배경 후광 효과 */}
-      <div className={`absolute inset-0 bg-[#697565]/10 blur-[100px] transition-all duration-1000 ${isAiTalking ? 'opacity-100 scale-110 glow-effect' : 'opacity-0 scale-100'}`}></div>
+      <div className={`absolute inset-0 bg-[#B18B67]/10 blur-[100px] transition-all duration-1000 ${isAiTalking ? 'opacity-100 scale-110 glow-effect' : 'opacity-0 scale-100'}`}></div>
 
       <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-2">
         <div className={`relative w-full h-full avatar-container ${isAiTalking ? 'avatar-talking' : ''}`}>
@@ -81,7 +81,7 @@ export default function InterviewerSection({ isAiTalking, interviewerId = 'norma
               {[...Array(10)].map((_, i) => (
                 <div 
                   key={i} 
-                  className="wave-bar w-1.5 bg-[#697565] rounded-full shadow-[0_0_15px_rgba(105,117,101,0.5)]" 
+                  className="wave-bar w-1.5 bg-[#B18B67] rounded-full shadow-[0_0_15px_rgba(105,117,101,0.5)]" 
                   style={{ 
                     animationDelay: `${i * 0.1}s`,
                   }}
@@ -94,9 +94,9 @@ export default function InterviewerSection({ isAiTalking, interviewerId = 'norma
 
       {/* 하단 상태 표시바 */}
       <div className="mt-4 shrink-0 pb-4">
-        <div className={`flex items-center gap-3 px-6 py-2 rounded-full bg-black/20 border border-white/5 transition-all ${isAiTalking ? 'border-[#697565]/50' : ''}`}>
-           <div className={`w-2 h-2 rounded-full ${isAiTalking ? 'bg-[#697565] animate-pulse' : 'bg-white/20'}`}></div>
-           <span className={`text-[10px] font-bold tracking-[0.4em] uppercase ${isAiTalking ? 'text-white' : 'text-white/30'}`}>
+        <div className={`flex items-center gap-3 px-6 py-2 rounded-full bg-black/20 border border-white/5 transition-all ${isAiTalking ? 'border-[#B18B67]/50' : ''}`}>
+           <div className={`w-2 h-2 rounded-full ${isAiTalking ? 'bg-[#B18B67] animate-pulse' : 'bg-white/20'}`}></div>
+           <span className={`text-[10px] font-bold tracking-[0.4em] uppercase ${isAiTalking ? 'text-[#3D352F]' : 'text-[#3D352F]'}`}>
              {isAiTalking ? 'AI Interviewer Speaking' : 'Standing By'}
            </span>
         </div>

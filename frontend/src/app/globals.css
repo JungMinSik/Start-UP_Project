@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --bg-color: #252620;
-  --sidebar-bg: #3C3D37;
-  --accent-color: #697565;
-  --text-color: #FFFFFF;
+  --bg-color: #C8BFB6;
+  --sidebar-bg: #DCD3C9;
+  --accent-color: #B18B67;
+  --text-color: #3D352F;
 }
 
 body {
@@ -36,7 +36,7 @@ body {
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid var(--accent-color);
-  box-shadow: 0 0 15px rgba(105, 117, 101, 0.3);
+  box-shadow: 0 0 15px rgba(177, 139, 103, 0.2);
   animation: breathing 4s infinite ease-in-out;
 }
 
