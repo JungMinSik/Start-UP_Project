@@ -3,14 +3,14 @@
 from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     userid: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    # username: Mapped[str] = mapped_column(Text, nullable=False)
+    username: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     interviews: Mapped[list["Interview"]] = relationship(back_populates="user")
